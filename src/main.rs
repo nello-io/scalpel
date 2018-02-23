@@ -95,7 +95,7 @@ fn main() {
         std::process::exit(39);
     }
 
-    const CHUNK : usize = 8192; // args.flag_fragment_size;
+    const CHUNK : usize = 8192; // TODO args.flag_fragment_size;
 
     let mut remaining = size;
     loop {
