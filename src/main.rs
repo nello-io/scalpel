@@ -31,11 +31,11 @@ Usage:
   scalpel [--fragment=<fragment>] [--start=<start>] --end=<end> --output=<output> <victimfile>
   scalpel [--fragment=<fragment>] [--start=<start>] --size=<size> --output=<output> <victimfile>
   scalpel (-h | --help)
-  scalpel [-v |--version]
+  scalpel (-v |--version)
 
 Options:
   -h --help     Show this screen.
-  --version     Show version.
+  -v --version     Show version.
   --start=<start>  Start byte offset of the section to cut out.
   --end=<end>      The end byte offset which will not be included.
   --size=<size>    Alternate way to sepcify the <end> combined with start.
