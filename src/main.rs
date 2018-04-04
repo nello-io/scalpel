@@ -6,14 +6,21 @@ extern crate env_logger;
 extern crate serde_derive;
 extern crate docopt;
 
-use docopt::Docopt;
+extern crate bytes;
+extern crate ring;
+#[macro_use]
+extern crate failure;
 
+use docopt::Docopt;
 
 
 use std::fs::*;
 
 
 use std::io::{Write,Read,Seek,SeekFrom};
+
+mod signature;
+
 
 
 const USAGE: &'static str = "
@@ -123,3 +130,5 @@ fn main() {
 
     std::process::exit(0);
 }
+
+
