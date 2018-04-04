@@ -19,6 +19,7 @@ use std::fs::*;
 
 use std::io::{Write,Read,Seek,SeekFrom};
 
+mod errors;
 mod signature;
 
 
@@ -30,7 +31,7 @@ Usage:
   scalpel [--fragment=<fragment>] [--start=<start>] --end=<end> --output=<output> <victimfile>
   scalpel [--fragment=<fragment>] [--start=<start>] --size=<size> --output=<output> <victimfile>
   scalpel (-h | --help)
-  scalpel (-v |--version)
+  scalpel [-v |--version]
 
 Options:
   -h --help     Show this screen.
@@ -49,7 +50,11 @@ struct Args {
     flag_fragment: Option<usize>,
     flag_output: String,
     arg_victimfile: String,
+    flag_version: bool,
 }
+
+const VERSION: &'static str = env!("CARGO_PKG_VERSION");
+const NAME: &'static str = env!("CARGO_PKG_NAME");
 
 fn main() {
     env_logger::init();
@@ -57,6 +62,11 @@ fn main() {
     let args: Args = Docopt::new(USAGE)
                             .and_then(|d| d.deserialize())
                             .unwrap_or_else(|e| e.exit());
+    
+    if args.flag_version {
+        println!("{} {}",NAME, VERSION);
+        std::process::exit(0);
+    }
 
     let start = args.flag_start.unwrap_or(0) as u64;
     let size : u64 =

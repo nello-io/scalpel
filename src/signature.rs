@@ -1,6 +1,4 @@
-mod errors;
 use errors::*;
-
 
 use bytes::{Bytes, BytesMut};
 

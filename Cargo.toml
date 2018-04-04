@@ -19,7 +19,7 @@ env_logger = "0.5"
 #ring = "^0.12"
 #webpki = "^0.17"
 
-bytes = { version = "*"}
+bytes = "*"
 ring = "0.12.1"
 
 failure = "*"
