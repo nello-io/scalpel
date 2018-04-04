@@ -51,6 +51,7 @@ struct Args {
     flag_output: String,
     arg_victimfile: String,
     flag_version: bool,
+    flag_help: bool,
 }
 
 const VERSION: &'static str = env!("CARGO_PKG_VERSION");
@@ -64,7 +65,10 @@ fn main() {
                             .unwrap_or_else(|e| e.exit());
     
     if args.flag_version {
-        println!("{} {}",NAME, VERSION);
+        println!("{} {}",NAME , VERSION);
+        std::process::exit(0);
+    } else if args.flag_help {
+        println!("{}", USAGE);
         std::process::exit(0);
     }
 
