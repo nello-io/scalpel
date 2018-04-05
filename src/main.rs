@@ -1,6 +1,8 @@
 #[macro_use] extern crate log;
 extern crate env_logger;
 
+extern crate nello;
+
 
 #[macro_use]
 extern crate serde_derive;
@@ -19,7 +21,7 @@ use std::fs::*;
 
 use std::io::{Write,Read,Seek,SeekFrom};
 
-mod errors;
+//mod errors;
 mod signature;
 
 

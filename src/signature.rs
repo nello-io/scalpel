@@ -1,4 +1,4 @@
-use errors::*;
+use nello::errors::*;
 
 use bytes::{Bytes, BytesMut};
 
@@ -17,14 +17,14 @@ impl Default for Signature {
     }
 }
 
-impl Signature {
+/*impl Signature {
     /// generate Ed25519 Key Pair in PKCS#8 (v2) format
     fn generate_bytes() -> Signature::bytes {
         let random = rand::SystemRandom::new();
         signature::Ed25519KeyPair::generate_pkcs8(&random)?;
     }
 
-}
+}*/
 
 use std::fmt::Debug;
 
