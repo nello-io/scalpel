@@ -3,6 +3,7 @@ extern crate env_logger;
 
 extern crate nello;
 
+extern crate untrusted;
 
 #[macro_use]
 extern crate serde_derive;
@@ -17,13 +18,12 @@ use docopt::Docopt;
 
 
 use std::fs::*;
-
+use bytes::{Bytes, BytesMut};
 
 use std::io::{Write,Read,Seek,SeekFrom};
 
-//mod errors;
 mod signature;
-
+use signature::*;
 
 
 const USAGE: &'static str = "
@@ -32,6 +32,7 @@ scalpel
 Usage:
   scalpel [--fragment=<fragment>] [--start=<start>] --end=<end> --output=<output> <victimfile>
   scalpel [--fragment=<fragment>] [--start=<start>] --size=<size> --output=<output> <victimfile>
+  scalpel --sign <victimefile>
   scalpel (-h | --help)
   scalpel (-v |--version)
 
@@ -42,6 +43,7 @@ Options:
   --end=<end>      The end byte offset which will not be included.
   --size=<size>    Alternate way to sepcify the <end> combined with start.
   --fragment=<fragment>  Define the size of the fragment/chunk to read/write at once.
+  --sign    sign and verify a binary
 ";
 
 #[derive(Debug, Deserialize)]
@@ -54,6 +56,7 @@ struct Args {
     arg_victimfile: String,
     flag_version: bool,
     flag_help: bool,
+    flag_sign: bool,
 }
 
 const VERSION: &'static str = env!("CARGO_PKG_VERSION");
@@ -71,6 +74,17 @@ fn main() {
         std::process::exit(0);
     } else if args.flag_help {
         println!("{}", USAGE);
+        std::process::exit(0);
+    } else if args.flag_sign {
+        println!("Signing file...");
+        // TODO: sign file...
+        let test_bytes = Bytes::from(&b"This is a text message"[..]);
+
+        let mut sig = Signature::new();
+        sig.keypair = Signature::generate_ed25519_keypair();
+
+        Signature::sign_file(sig.keypair.unwrap(), &test_bytes);
+        
         std::process::exit(0);
     }
 
