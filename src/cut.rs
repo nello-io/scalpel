@@ -2,7 +2,7 @@ use std;
 use std::fs::*;
 use std::io::{Write,Read,Seek,SeekFrom};
 
-
+// TODO: pull parameter handling back to main method, only pass values, no options
 pub fn cut_out_bytes(   flag_start: Option<u64>,
                     flag_end: Option<u64>,
                     flag_size: Option<u64>,
@@ -14,7 +14,7 @@ pub fn cut_out_bytes(   flag_start: Option<u64>,
         if let Some(end) = flag_end {
             if let Some(_) = flag_size {
                 error!("Either end or size has to be specified, not both");
-                std::process::exit(31);
+                std::process::exit(31); // TODO: do not break in module
             }
             if start >= end {
                 error!("end addr {1} should be larger than start addr {0}", start, end);
