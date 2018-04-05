@@ -1,6 +1,5 @@
 use std;
 use std::fs::*;
-use bytes::Bytes;
 use std::io::{Write,Read,Seek,SeekFrom};
 
 

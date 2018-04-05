@@ -1,8 +1,7 @@
 use nello::errors::*;
 
-use bytes::{Bytes, BytesMut};
+use bytes::Bytes;
 use untrusted;
-use failure;
 
 use ring::{rand, signature};
 use nello::v2::proto::signature::Signature as InnerSignature;

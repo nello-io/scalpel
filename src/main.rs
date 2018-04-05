@@ -12,10 +12,7 @@ extern crate failure;
 
 
 use docopt::Docopt;
-use std::fs::*;
-use bytes::{Bytes, BytesMut};
-
-use std::io::{Write,Read,Seek,SeekFrom};
+use bytes::Bytes;
 
 mod signature;
 use signature::*;
