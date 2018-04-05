@@ -1,22 +1,17 @@
-#[macro_use] extern crate log;
+#[macro_use]
+extern crate log;
 extern crate env_logger;
-
 extern crate nello;
-
 extern crate untrusted;
-
 #[macro_use]
 extern crate serde_derive;
 extern crate docopt;
-
 extern crate bytes;
 extern crate ring;
-#[macro_use]
 extern crate failure;
 
+
 use docopt::Docopt;
-
-
 use std::fs::*;
 use bytes::{Bytes, BytesMut};
 
@@ -25,16 +20,21 @@ use std::io::{Write,Read,Seek,SeekFrom};
 mod signature;
 use signature::*;
 
+mod cut;
 
 const USAGE: &'static str = "
 scalpel
 
 Usage:
-  scalpel [--fragment=<fragment>] [--start=<start>] --end=<end> --output=<output> <victimfile>
-  scalpel [--fragment=<fragment>] [--start=<start>] --size=<size> --output=<output> <victimfile>
-  scalpel --sign <victimefile>
+  scalpel cut [--fragment=<fragment>] [--start=<start>] --end=<end> --output=<output> <victimfile>
+  scalpel cut [--fragment=<fragment>] [--start=<start>] --size=<size> --output=<output> <victimfile>
+  scalpel sign <victimefile>
   scalpel (-h | --help)
   scalpel (-v |--version)
+
+Commands:
+  cut   extract bytes from a binary file
+  sign  sign binary with ED25519 Key Pair
 
 Options:
   -h --help     Show this screen.
@@ -48,6 +48,8 @@ Options:
 
 #[derive(Debug, Deserialize)]
 struct Args {
+    cmd_cut: bool,
+    cmd_sign: bool,
     flag_start: Option<u64>,
     flag_end: Option<u64>,
     flag_size: Option<u64>,
@@ -56,7 +58,6 @@ struct Args {
     arg_victimfile: String,
     flag_version: bool,
     flag_help: bool,
-    flag_sign: bool,
 }
 
 const VERSION: &'static str = env!("CARGO_PKG_VERSION");
@@ -68,16 +69,17 @@ fn main() {
     let args: Args = Docopt::new(USAGE)
                             .and_then(|d| d.deserialize())
                             .unwrap_or_else(|e| e.exit());
-    
+
+    // check arguments
     if args.flag_version {
         println!("{} {}",NAME , VERSION);
         std::process::exit(0);
     } else if args.flag_help {
         println!("{}", USAGE);
         std::process::exit(0);
-    } else if args.flag_sign {
+    } else if args.cmd_sign {   // command sign
         println!("Signing file...");
-        // TODO: sign file...
+        // TODO: sign file properly
         let test_bytes = Bytes::from(&b"This is a text message"[..]);
 
         let mut sig = Signature::new();
@@ -86,74 +88,12 @@ fn main() {
         Signature::sign_file(sig.keypair.unwrap(), &test_bytes);
         
         std::process::exit(0);
-    }
-
-    let start = args.flag_start.unwrap_or(0) as u64;
-    let size : u64 =
-        if let Some(end) = args.flag_end {
-            if let Some(_) = args.flag_size {
-                error!("Either end of size has to be specified, not both");
-                std::process::exit(31);
-            }
-            if start >= end {
-                error!("end addr {1} should be larger than start addr {0}", start, end);
-                std::process::exit(34);
-            }
-            end - start
-        } else if let Some(size) = args.flag_size {
-            size
-        } else {
-            error!("end addr should be larger than start addr");
-            std::process::exit(36);
-        };
-
-    let victim = args.arg_victimfile;
-    let output = args.flag_output;
-
-
-    let mut f_out = OpenOptions::new()
-                                    .write(true)
-                                    .truncate(true)
-                                    .create_new(true)
-                                    .open(output.as_str())
-                                    .unwrap_or_else(
-                                        |e| {
-                                            error!("Failed to open \"{}\" {:?}", output, e);
-                                            std::process::exit(37);
-                                        } );
-
-    let mut f_in = OpenOptions::new().read(true)
-        .open(victim.as_str()).unwrap_or_else(|e| {
-        error!("Failed to open \"{}\" {:?}", victim, e);
-        std::process::exit(34);
-    } );
-    if let Err(_) = f_in.seek(SeekFrom::Start(start)) {
-        error!("Failed to seek to start");
-        std::process::exit(39);
-    }
-
-    const CHUNK : usize = 8192; // TODO args.flag_fragment_size;
-
-    let mut remaining = size;
-    loop {
-        let mut fragment : [u8;CHUNK] = [0;CHUNK];
-        if let Err(_) = f_in.read(&mut fragment[..]) {
-            error!("Failed to read in fragment");
-            std::process::exit(38);
-        }
-        if remaining < CHUNK as u64 {
-            if let Err(_) = f_out.write_all(&fragment[0..(remaining as usize)]) {
-                error!("Failed to write out fragment");
-                std::process::exit(7);
-            }
-            break;
-        } else {
-            if let Err(_) = f_out.write_all(&fragment[..]) {
-                error!("Failed to write out last fragment");
-                std::process::exit(7);
-            }
-            remaining -= CHUNK as u64;
-        }
+    } else if args.cmd_cut {    // command cut
+        cut::cut_out_bytes( args.flag_start,
+                            args.flag_end,
+                            args.flag_size, 
+                            args.arg_victimfile,
+                            args.flag_output);
     }
 
     info!("scalpel operation complete");
