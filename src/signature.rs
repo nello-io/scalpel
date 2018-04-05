@@ -8,13 +8,22 @@ use ring::{rand, signature};
 #[derive(Debug, Eq, PartialEq)]
 pub struct Signature {
     bytes: BytesMut,
-    // TODO use ed25519 elliptic curve signature
+    // TODO use ed25519 elliptic curve signature (it also uses bytes)
 }
 
 impl Default for Signature {
     fn default() -> Self {
         Self { bytes: BytesMut::with_capacity(64) }
     }
+}
+
+impl Signature {
+    /// generate Ed25519 Key Pair in PKCS#8 (v2) format
+    fn generate_bytes() -> Signature::bytes {
+        let random = rand::SystemRandom::new();
+        signature::Ed25519KeyPair::generate_pkcs8(&random)?;
+    }
+
 }
 
 use std::fmt::Debug;
