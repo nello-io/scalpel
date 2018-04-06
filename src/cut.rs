@@ -1,12 +1,11 @@
-use std;
 use std::fs::*;
 use std::io::{Write,Read,Seek,SeekFrom};
 
-// TODO: pull parameter handling back to main method, only pass values, no options
 pub fn cut_out_bytes(start: u64,
                         size: u64,
                         victim: String,
-                        output: String) -> Result<i32, i32> {
+                        output: String,
+                        fragment_size: usize) -> Result<i32, i32> {
    
     let mut f_out = match OpenOptions::new()
                                     .write(true)
@@ -34,16 +33,14 @@ pub fn cut_out_bytes(start: u64,
         return Err(39);
     }
 
-    const CHUNK : usize = 8192; // TODO: args.flag_fragment_size;
-
     let mut remaining = size;
     loop {
-        let mut fragment : [u8;CHUNK] = [0;CHUNK];
-        if let Err(_) = f_in.read(&mut fragment[..]) {
+        let mut fragment = vec!(0; fragment_size);
+        if let Err(_) = f_in.read_exact(&mut fragment[..]) {
             error!("Failed to read in fragment");
             return Err(38);
         }
-        if remaining < CHUNK as u64 {
+        if remaining < fragment_size as u64 {
             if let Err(_) = f_out.write_all(&fragment[0..(remaining as usize)]) {
                 error!("Failed to write out fragment");
                 return Err(7);
@@ -54,7 +51,7 @@ pub fn cut_out_bytes(start: u64,
                 error!("Failed to write out last fragment");
                 return Err(7);
             }
-            remaining -= CHUNK as u64;
+            remaining -= fragment_size as u64;
         }
     }
 

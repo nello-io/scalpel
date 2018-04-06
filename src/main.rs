@@ -103,15 +103,17 @@ fn main() {
             } else if let Some(size) = args.flag_size {
                 size
             } else {
-                //TODO: error message correct?
+                //TODO: error message reasonable?
                 error!("end addr should be larger than start addr");
                 std::process::exit(36);
             };
+        let fragment_size = args.flag_fragment.unwrap_or(8192) as usize; // CHUNK from cut
 
         match cut::cut_out_bytes( start,
                             size,
                             args.arg_victimfile,
-                            args.flag_output) {
+                            args.flag_output,
+                            fragment_size) {
                                 Ok(_) => info!("Cutting succeeded."),
                                 Err(e) => std::process::exit(e),
                             }
