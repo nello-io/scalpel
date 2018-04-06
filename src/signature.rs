@@ -21,7 +21,7 @@ impl Signature {
         let rng = rand::SystemRandom::new();
         let bytes =  match signature::Ed25519KeyPair::generate_pkcs8(&rng) {
             Ok(byt) => byt,
-            Err(_)  => return(None),
+            Err(_)  => return None,
         };
         let input = untrusted::Input::from(&bytes);
         match signature::Ed25519KeyPair::from_pkcs8(input){

@@ -13,11 +13,14 @@ extern crate failure;
 
 use docopt::Docopt;
 use bytes::Bytes;
+use std::fs::OpenOptions;
+use std::io::Read;
 
 mod signature;
 use signature::*;
 
 mod cut;
+mod concat;
 
 const USAGE: &'static str = "
 scalpel
@@ -75,17 +78,34 @@ fn main() {
         println!("{}", USAGE);
         std::process::exit(0);
     } else if args.cmd_sign {   // command sign
-        println!("Signing file...");
-        // TODO: sign file properly
-        let test_bytes = Bytes::from(&b"This is a text message"[..]);
+        // open file
+        let mut victim = match OpenOptions::new().read(true).open( args.arg_victimfile.as_str() ) {
+            Ok(file) => file,
+            Err(e)  => {
+                error!("Failed to open {}: {:?}", &args.arg_victimfile, e);
+                std::process::exit(34)
+            }
+        };
+        // read file to Bytes
+        let mut content: Vec<u8> = Vec::new();
+        if let Err(e) = victim.read_to_end( &mut content){
+            error!("Failed to read {}: {:?}", &args.arg_victimfile, e);
+            std::process::exit(38);
+        }
+        // convert buf to Bytes
+        let byte_victim = Bytes::from(content);
 
         let sig = Signature::new();
+        // get signature of file
+        let signature = Signature::sign_file(sig.keypair.unwrap(), &byte_victim);
+        println!("{:?}", signature.as_ref()); //DEBUG
+        // create signed file
+        if let Err(e) = concat::append_signature(args.arg_victimfile, &signature){
+            error!("Failed to sign.");
+            std::process::exit(e);
+        }
         
-        let signed = Signature::sign_file(sig.keypair.unwrap(), &test_bytes);
-
-        
-        
-
+        info!("singing succeeded.");
         std::process::exit(0);
     } else if args.cmd_cut {    // command cut
 

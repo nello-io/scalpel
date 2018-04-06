@@ -45,7 +45,7 @@ pub fn cut_out_bytes(start: u64,
                 error!("Failed to write out fragment");
                 return Err(7);
             }
-            return Ok(0);
+            return Ok(0); //TODO: return 0 when succeeded?
         } else {
             if let Err(_) = f_out.write_all(&fragment[..]) {
                 error!("Failed to write out last fragment");
