@@ -1,4 +1,4 @@
-use std::fs::*;
+use std::fs::OpenOptions;
 use std::io::{Write,Read,Seek,SeekFrom};
 
 pub fn cut_out_bytes(start: u64,
@@ -36,7 +36,7 @@ pub fn cut_out_bytes(start: u64,
     let mut remaining = size;
     loop {
         let mut fragment = vec!(0; fragment_size);
-        if let Err(_) = f_in.read_exact(&mut fragment[..]) {
+        if let Err(_) = f_in.read(&mut fragment[..]) {
             error!("Failed to read in fragment");
             return Err(38);
         }
