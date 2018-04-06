@@ -3,12 +3,12 @@ use nello::errors::*;
 use bytes::Bytes;
 use untrusted;
 
+use ring;
 use ring::{rand, signature};
 use nello::v2::proto::signature::Signature as InnerSignature;
 
-//#[derive(Debug)]
 pub struct Signature {
-    inner_signatur: InnerSignature,
+    inner_signatur: InnerSignature, // necessary?
     pub keypair: Result<signature::Ed25519KeyPair>,
 }
 
@@ -19,7 +19,7 @@ impl Signature {
         Self{   inner_signatur: InnerSignature::new(),
                 keypair: Signature::generate_ed25519_keypair(), }
     }
-    // neccessary?
+    // necessary?
     pub fn len(&self) -> usize {
         self.inner_signatur.len()
     }
@@ -37,9 +37,10 @@ impl Signature {
     }
 
     /// sign file with generated keypair
-    pub fn sign_file(key_pair: signature::Ed25519KeyPair, file: &Bytes) {
-        // TODO: proper signing, sign(file) has to return the signature
-        let sig = key_pair.sign(&file);
+    pub fn sign_file(key_pair: signature::Ed25519KeyPair, file: &Bytes)
+                        -> ring::signature::Signature {
+        
+        key_pair.sign(&file)
                 
     }
     

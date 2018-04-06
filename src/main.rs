@@ -82,8 +82,8 @@ fn main() {
         let mut sig = Signature::new();
         sig.keypair = Signature::generate_ed25519_keypair();
 
-        Signature::sign_file(sig.keypair.unwrap(), &test_bytes);
-        
+        let signed = Signature::sign_file(sig.keypair.unwrap(), &test_bytes);
+
         std::process::exit(0);
     } else if args.cmd_cut {    // command cut
 
