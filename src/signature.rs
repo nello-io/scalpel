@@ -1,39 +1,33 @@
-use nello::errors::*;
-
 use bytes::Bytes;
 use untrusted;
 
 use ring;
 use ring::{rand, signature};
-use nello::v2::proto::signature::Signature as InnerSignature;
 
 pub struct Signature {
-    inner_signatur: InnerSignature, // necessary?
-    pub keypair: Result<signature::Ed25519KeyPair>,
+    pub keypair: Option<signature::Ed25519KeyPair>, 
 }
 
 
 impl Signature {
 
     pub fn new() -> Self {
-        Self{   inner_signatur: InnerSignature::new(),
-                keypair: Signature::generate_ed25519_keypair(), }
-    }
-    // necessary?
-    pub fn len(&self) -> usize {
-        self.inner_signatur.len()
+        Self{   keypair: Signature::generate_ed25519_keypair(), }
     }
     
-    // make private and use it directly in sign function?
     /// generate a ed25519 keypair in pkcs8 format
-    pub fn generate_ed25519_keypair() -> Result<signature::Ed25519KeyPair> {
+    fn generate_ed25519_keypair() -> Option<signature::Ed25519KeyPair> {
 
         let rng = rand::SystemRandom::new();
-        let bytes = signature::Ed25519KeyPair::generate_pkcs8(&rng)?;
+        let bytes =  match signature::Ed25519KeyPair::generate_pkcs8(&rng) {
+            Ok(byt) => byt,
+            Err(_)  => return(None),
+        };
         let input = untrusted::Input::from(&bytes);
-        let keypair = signature::Ed25519KeyPair::from_pkcs8(input)?;
-
-        Ok(keypair) // error handling?
+        match signature::Ed25519KeyPair::from_pkcs8(input){
+            Ok(key) => Some(key),
+            Err(_)  => None,
+        }
     }
 
     /// sign file with generated keypair

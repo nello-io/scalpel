@@ -79,10 +79,12 @@ fn main() {
         // TODO: sign file properly
         let test_bytes = Bytes::from(&b"This is a text message"[..]);
 
-        let mut sig = Signature::new();
-        sig.keypair = Signature::generate_ed25519_keypair();
-
+        let sig = Signature::new();
+        
         let signed = Signature::sign_file(sig.keypair.unwrap(), &test_bytes);
+
+        
+        
 
         std::process::exit(0);
     } else if args.cmd_cut {    // command cut
