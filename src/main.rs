@@ -25,7 +25,7 @@ scalpel
 Usage:
   scalpel cut [--fragment=<fragment>] [--start=<start>] --end=<end> --output=<output> <victimfile>
   scalpel cut [--fragment=<fragment>] [--start=<start>] --size=<size> --output=<output> <victimfile>
-  scalpel sign <victimefile>
+  scalpel sign <victimfile>
   scalpel (-h | --help)
   scalpel (-v |--version)
 
@@ -36,7 +36,7 @@ Commands:
 Options:
   -h --help     Show this screen.
   -v --version     Show version.
-  --start=<start>  Start byte offset of the section to cut out.
+  --start=<start>  Start byte offset of the section to cut out. If omitted, set to 0.
   --end=<end>      The end byte offset which will not be included.
   --size=<size>    Alternate way to sepcify the <end> combined with start.
   --fragment=<fragment>  Define the size of the fragment/chunk to read/write at once.
@@ -86,11 +86,35 @@ fn main() {
         
         std::process::exit(0);
     } else if args.cmd_cut {    // command cut
-        cut::cut_out_bytes( args.flag_start,
-                            args.flag_end,
-                            args.flag_size, 
+
+        // do input handling
+        let start = args.flag_start.unwrap_or(0) as u64; // if none, set to 0
+        let size : u64 =
+            if let Some(end) = args.flag_end {
+                if let Some(_) = args.flag_size {
+                    error!("Either end or size has to be specified, not both");
+                    std::process::exit(31);
+                }
+                if start >= end {
+                    error!("end addr {1} should be larger than start addr {0}", start, end);
+                    std::process::exit(34);
+                }
+                end - start
+            } else if let Some(size) = args.flag_size {
+                size
+            } else {
+                //TODO: error message correct?
+                error!("end addr should be larger than start addr");
+                std::process::exit(36);
+            };
+
+        match cut::cut_out_bytes( start,
+                            size,
                             args.arg_victimfile,
-                            args.flag_output);
+                            args.flag_output) {
+                                Ok(_) => info!("Cutting succeeded."),
+                                Err(e) => std::process::exit(e),
+                            }
     }
 
     info!("scalpel operation complete");
