@@ -1,4 +1,5 @@
-use failure::Error;
+pub use failure::Error;
+pub use failure::Fail;
 
 use std;
 pub type Result<X> = std::result::Result<X, Error>;

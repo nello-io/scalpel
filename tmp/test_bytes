@@ -1,0 +1,14 @@
+# scalpel
+
+![A scalpel and stitch tool][logo]
+
+
+### Snip around and sign binaries
+
+This is mostly used for the case where parts of the binary need to be extracted or replaced.
+
+
+
+#### Use Cases
+
+* ext

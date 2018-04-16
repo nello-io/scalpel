@@ -1,7 +1,8 @@
 use std::fs::OpenOptions;
 use std::io::{Read, Seek, SeekFrom, Write};
 
-use errors::{Result, SigningError};
+use errors::*;
+//use failure::Fail;
 
 pub fn cut_out_bytes(
     start: u64,
@@ -15,31 +16,31 @@ pub fn cut_out_bytes(
         .write(true)
         .truncate(true)
         .create_new(true)
-        .open(output.as_str())?;
-        //.map_err(|err| SigningError::OpeningError.into())?;
+        .open(output.as_str())
+        .map_err(|err| SigningError::OpeningError.context(err))?;
 
     let mut f_in = OpenOptions::new()
         .read(true)
-        .open(victim.as_str())?;
-        //.map_err(|err| SigningError::OpeningError.into())?;
+        .open(victim.as_str())
+        .map_err(|err| SigningError::OpeningError.context(err))?;
 
     f_in.seek(SeekFrom::Start(start))
-        .map_err(|err| SigningError::SeekError)?;
+        .map_err(|err| SigningError::SeekError.context(err))?;
 
     let mut remaining = size;
     loop {
         let mut fragment = vec![0; fragment_size];
         f_in.read(&mut fragment[..])
-            .map_err(|err| SigningError::ReadingError)?;
+            .map_err(|err| SigningError::ReadingError.context(err) )?;
 
         if remaining < fragment_size as u64 {
             f_out.write_all(&fragment[0..(remaining as usize)])
-                .map_err(|err| SigningError::WritingError)?;
+                .map_err(|err| SigningError::WritingError.context(err))?;
             
-            return Ok(()); //TODO: return 0 when succeeded?
+            return Ok(());
         } else {
             f_out.write_all(&fragment[..])
-                .map_err(|err| SigningError::WritingError)?;
+                .map_err(|err| SigningError::WritingError.context(err))?;
             remaining -= fragment_size as u64;
         }
     }
