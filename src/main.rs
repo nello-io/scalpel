@@ -122,10 +122,10 @@ fn main() {
             };
         let fragment_size = args.flag_fragment.unwrap_or(8192) as usize; // CHUNK from cut
 
-        match cut::cut_out_bytes( start,
-                            size,
-                            args.arg_victimfile,
+        match cut::cut_out_bytes( args.arg_victimfile,
                             args.flag_output,
+                            start,
+                            size,
                             fragment_size) {
                                 Ok(_) => info!("Cutting succeeded."),
                                 Err(_) => std::process::exit(77),

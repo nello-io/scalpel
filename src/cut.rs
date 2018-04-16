@@ -5,10 +5,10 @@ use errors::*;
 //use failure::Fail;
 
 pub fn cut_out_bytes(
-    start: u64,
-    size: u64,
     victim: String,
     output: String,
+    start: u64,
+    size: u64,
     fragment_size: usize,
 ) -> Result<()> {
 
@@ -46,15 +46,30 @@ pub fn cut_out_bytes(
     }
 }
 
-/*#[cfg(test)]
+#[cfg(test)]
 mod test {
     use super::*;
 
     #[test]
     fn test_cut_out_bytes() {
+        let testvec = vec![0u8, 10u8, ...]; // Iter::repeat().take(1000).collect::<Vec<u8>>();
         let victim = String::from("tmp/test_bytes");
+        {
+            let testfile = OpenOptions::new().write(true).open(victim).expect("Failed to open file");
+            testfile.write()
+        }
         let output = String::from("tmp/test_bytes_cut");
-        cut_out_bytes(0, 10, victim, output, 8192).expect("Cut of bytes failed.");
+        assert!(cut_out_bytes(0, 10, victim, output, 8192).is_ok());
     }
 
-}*/
+    #[test]
+    fn test_bufferd_cut_out() {
+        let bytes : &[u8] = &[0,1,2,3,4,5,6,7,8,10,11,12,13];
+
+
+        let output_bytes = cut_out_bytes(2,3, vicitim_bytes).expect("Failed to cut");
+
+        assert_eq!(output_bytes, &bytes[2..5]);
+    }
+
+}
