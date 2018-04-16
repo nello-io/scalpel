@@ -1,4 +1,4 @@
-use std::fs::OpenOptions;
+use std::fs::{File, OpenOptions};
 use std::io::{Read, Seek, SeekFrom, Write};
 
 use errors::*;
@@ -12,17 +12,12 @@ pub fn cut_out_bytes(
     fragment_size: usize,
 ) -> Result<()> {
 
-    let mut f_out = OpenOptions::new()
-        .write(true)
-        .truncate(true)
-        .create_new(true)
-        .open(output.as_str())
-        .map_err(|err| SigningError::OpeningError.context(err))?;
+    const READ: bool = true;
+    const WRITE: bool = false;
 
-    let mut f_in = OpenOptions::new()
-        .read(true)
-        .open(victim.as_str())
-        .map_err(|err| SigningError::OpeningError.context(err))?;
+    let mut f_out = open_file(output, READ )?;
+
+    let mut f_in = open_file(victim, WRITE)?;
 
     f_in.seek(SeekFrom::Start(start))
         .map_err(|err| SigningError::SeekError.context(err))?;
@@ -44,6 +39,29 @@ pub fn cut_out_bytes(
             remaining -= fragment_size as u64;
         }
     }
+}
+
+/// File Open utility for cutting bytes
+fn open_file(file: String, rw: bool) -> Result<File> {
+    
+    if rw {
+        let f_in = OpenOptions::new()
+        .read(true)
+        .open(file.as_str())
+        .map_err(|err| SigningError::OpeningError.context(err))?;
+
+        Ok(f_in)
+    } else {
+        let f_out = OpenOptions::new()
+            .write(true)
+            .truncate(true)
+            .create_new(true)
+            .open(file.as_str())
+            .map_err(|err| SigningError::OpeningError.context(err))?;
+
+            Ok(f_out)
+    }
+
 }
 
 #[cfg(test)]
