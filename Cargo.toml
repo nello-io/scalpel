@@ -3,21 +3,12 @@ name = "scalpel"
 version = "0.1.0"
 authors = ["Bernhard Schuster <bernhard@nello.io>"]
 
-[features]
-default = ["v1", "v2"]
-v1 = []
-v2 = []
-
-
 [dependencies]
 docopt = "0.8"
 serde = "1.0"
 serde_derive = "1.0"
 log = "0.4"
 env_logger = "0.5"
-#sodiumoxide = "^0.0.16"
-#ring = "^0.12"
-#webpki = "^0.17"
 
 bytes = "*"
 ring = "0.12.1"
@@ -25,6 +16,3 @@ untrusted = "0.5.1"
 
 failure = "*"
 failure_derive = "*"
-
-#nello = { path="../nello-rust", features=["v2"]} # options:
-#no-default-features=true, git = 'github.com/nello-io/nello-rust.git', 
