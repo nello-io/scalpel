@@ -128,7 +128,7 @@ fn main() {
                             args.flag_output,
                             fragment_size) {
                                 Ok(_) => info!("Cutting succeeded."),
-                                Err(e) => std::process::exit(e),
+                                Err(_) => std::process::exit(77),
                             }
     }
 

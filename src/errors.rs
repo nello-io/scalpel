@@ -16,4 +16,7 @@ pub enum SigningError {
 
     #[fail(display = "Failed to resolve Path")]
     PathError,
+
+    #[fail(display = "Failed to seek from start")]
+    SeekError,
 }
