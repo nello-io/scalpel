@@ -7,7 +7,14 @@ use bytes::Bytes;
 /// takes a file and cretes a copy with signature appended
 pub fn append_signature( path: &Path, sig: &signature::Signature) -> Result<(), i32> {
     // get file
-    let file = path.to_str().unwrap(); // error if not a valid path
+    let file_result = path.to_str();
+    let file = match file_result {
+        Some(file) => file,
+        None  => {
+            error!("Failed to resolve path {:?}", &path);
+            return Err(37);
+        },
+    };
 
     // open output file, add "-signed" to name
     let file_split: Vec<&str> = file.rsplitn(2, '.').collect();
