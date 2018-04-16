@@ -12,9 +12,6 @@ extern crate failure;
 
 
 use docopt::Docopt;
-use bytes::Bytes;
-use std::fs::OpenOptions;
-use std::io::Read;
 use std::path::Path;
 
 mod signature;
@@ -79,29 +76,18 @@ fn main() {
         println!("{}", USAGE);
         std::process::exit(0);
     } else if args.cmd_sign {   // command sign
-        // open file
-        let mut victim = match OpenOptions::new().read(true).open( args.arg_victimfile.as_str() ) {
-            Ok(file) => file,
-            Err(e)  => {
-                error!("Failed to open {}: {:?}", &args.arg_victimfile, e);
-                std::process::exit(34)
-            }
+        
+        let path_victim = Path::new(&args.arg_victimfile);
+        let byte_victim = match concat::read_to_bytes(path_victim){
+            Ok(bytes) => bytes,
+            Err(e) => std::process::exit(e),
         };
-        // read file to Bytes
-        let mut content: Vec<u8> = Vec::new();
-        if let Err(e) = victim.read_to_end( &mut content){
-            error!("Failed to read {}: {:?}", &args.arg_victimfile, e);
-            std::process::exit(38);
-        }
-        // convert buf to Bytes
-        let byte_victim = Bytes::from(content);
 
         let sig = Signature::new();
         // get signature of file
         let signature = Signature::sign_file(sig.keypair.unwrap(), &byte_victim);
-        
+
         // create signed file
-        let path_victim = Path::new(&args.arg_victimfile);
         if let Err(e) = concat::append_signature( &path_victim , &signature){
             error!("Failed to sign.");
             std::process::exit(e);

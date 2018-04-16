@@ -26,5 +26,5 @@ untrusted = "0.5.1"
 failure = "*"
 failure_derive = "*"
 
-nello = { path="../nello-rust", features=["v2"]} # options:
+#nello = { path="../nello-rust", features=["v2"]} # options:
 #no-default-features=true, git = 'github.com/nello-io/nello-rust.git', 

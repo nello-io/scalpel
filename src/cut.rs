@@ -5,7 +5,7 @@ pub fn cut_out_bytes(start: u64,
                         size: u64,
                         victim: String,
                         output: String,
-                        fragment_size: usize) -> Result<i32, i32> {
+                        fragment_size: usize) -> Result<(), i32> {
    
     let mut f_out = match OpenOptions::new()
                                     .write(true)
