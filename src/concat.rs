@@ -45,5 +45,5 @@ pub fn append_signature( file: String, sig: &signature::Signature) -> Result<i32
         return Err(7);
     }
     
-    Ok(0) //TODO: return 0 when succeeded?
+    Ok(())
 }
