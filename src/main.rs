@@ -1,7 +1,7 @@
 #[macro_use]
 extern crate log;
 extern crate env_logger;
-extern crate nello;
+//extern crate nello;
 extern crate untrusted;
 #[macro_use]
 extern crate serde_derive;
@@ -15,6 +15,7 @@ use docopt::Docopt;
 use bytes::Bytes;
 use std::fs::OpenOptions;
 use std::io::Read;
+use std::path::Path;
 
 mod signature;
 use signature::*;
@@ -98,9 +99,10 @@ fn main() {
         let sig = Signature::new();
         // get signature of file
         let signature = Signature::sign_file(sig.keypair.unwrap(), &byte_victim);
-        println!("{:?}", signature.as_ref()); //DEBUG
+        
         // create signed file
-        if let Err(e) = concat::append_signature(args.arg_victimfile, &signature){
+        let path_victim = Path::new(&args.arg_victimfile);
+        if let Err(e) = concat::append_signature( &path_victim , &signature){
             error!("Failed to sign.");
             std::process::exit(e);
         }

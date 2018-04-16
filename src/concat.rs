@@ -1,10 +1,14 @@
 use ring::signature;
 use std::fs::OpenOptions;
 use std::io::{Write,Read};
+use std::path::Path;
 use bytes::Bytes;
 
 /// takes a file and cretes a copy with signature appended
-pub fn append_signature( file: String, sig: &signature::Signature) -> Result<(), i32> {
+pub fn append_signature( path: &Path, sig: &signature::Signature) -> Result<(), i32> {
+    // get file
+    let file = path.to_str().unwrap(); // error if not a valid path
+
     // open output file, add "-signed" to name
     let file_split: Vec<&str> = file.rsplitn(1, '.').collect();
     let file_sig = format!("{}-signed.{}", file_split[1], file_split[0]);
@@ -21,7 +25,7 @@ pub fn append_signature( file: String, sig: &signature::Signature) -> Result<(),
     // open input file
     let mut f_in = match OpenOptions::new()
                                     .read(true)
-                                    .open( file.as_str()) {
+                                    .open( path ) {
                                         Ok(file) => file,
                                         Err(e)  => {
                                             error!("Failed to open {}: {}", file, e);
