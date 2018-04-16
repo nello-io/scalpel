@@ -4,9 +4,10 @@ use std::io::{Write,Read};
 use bytes::Bytes;
 
 /// takes a file and cretes a copy with signature appended
-pub fn append_signature( file: String, sig: &signature::Signature) -> Result<i32, i32> {
+pub fn append_signature( file: String, sig: &signature::Signature) -> Result<(), i32> {
     // open output file, add "-signed" to name
-    let file_sig = format!("{}-signed", file);
+    let file_split: Vec<&str> = file.rsplitn(1, '.').collect();
+    let file_sig = format!("{}-signed.{}", file_split[1], file_split[0]);
     let mut f_out = match OpenOptions::new()
                                     .write(true)
                                     .create_new(true)
@@ -47,3 +48,14 @@ pub fn append_signature( file: String, sig: &signature::Signature) -> Result<i32
     
     Ok(())
 }
+
+/*#[cfg(test)]
+mod test {
+    use super::*;
+    
+    #[test]
+    fn fx() {
+        Ok().expect("Sign failed");
+    }
+}
+*/
