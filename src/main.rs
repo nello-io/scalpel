@@ -83,7 +83,7 @@ fn main() {
         let path_victim = Path::new(&args.arg_victimfile);
         let byte_victim = match concat::read_to_bytes(path_victim){
             Ok(bytes) => bytes,
-            Err(e) => std::process::exit(77),
+            Err(_) => std::process::exit(77),
         };
 
         let sig = Signature::new();
