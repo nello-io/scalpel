@@ -1,13 +1,15 @@
 #[macro_use]
 extern crate log;
 extern crate env_logger;
-//extern crate nello;
 extern crate untrusted;
 #[macro_use]
 extern crate serde_derive;
+extern crate serde;
 extern crate docopt;
 extern crate bytes;
 extern crate ring;
+
+#[macro_use]
 extern crate failure;
 
 
@@ -19,6 +21,7 @@ use signature::*;
 
 mod cut;
 mod concat;
+mod errors;
 
 const USAGE: &'static str = "
 scalpel
@@ -80,7 +83,7 @@ fn main() {
         let path_victim = Path::new(&args.arg_victimfile);
         let byte_victim = match concat::read_to_bytes(path_victim){
             Ok(bytes) => bytes,
-            Err(e) => std::process::exit(e),
+            Err(e) => std::process::exit(77),
         };
 
         let sig = Signature::new();
@@ -89,8 +92,8 @@ fn main() {
 
         // create signed file
         if let Err(e) = concat::append_signature( &path_victim , &signature){
-            error!("Failed to sign.");
-            std::process::exit(e);
+            error!("Failed to sign {:?}", e);
+            std::process::exit(77);
         }
         
         info!("singing succeeded.");
