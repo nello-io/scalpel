@@ -22,11 +22,11 @@ scalpel --start 282624 --size 241664 --output winc_part_B.bin xdk-asf-3.36.2/com
 #### Features 
 
 - [x] cut off a binary at specific start and end/size
-- [ ] Add signature verification and appendix features (using preferably [ring] and [webpki] or as an alternative [sodiumoxide] (linking it statically))
+- [x] Add signature verification and appendix features (using preferably [ring] and [webpki] or as an alternative [sodiumoxide] (linking it statically))
 - [ ] Handle endianness of checksums properly
 - [ ] Replace parts (i.e. cert files or NVStore sections) (with resigning if necessary)
 - [ ] Allow hexadecimal input
-- [ ] Allow multipile input scales (K = 1024, M = 1024*1024)
+- [x] Allow multipile input scales (K = 1024, M = 1024*1024)
 - [ ] Add verifier option for alignment to given sector/page size
 
 
