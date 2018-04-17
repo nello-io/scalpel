@@ -23,6 +23,7 @@ mod cut;
 mod concat;
 mod errors;
 
+// TODO add key as argument to sign
 const USAGE: &'static str = "
 scalpel
 

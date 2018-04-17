@@ -11,12 +11,11 @@ pub fn cut_out_bytes(
     size: u64,
     fragment_size: usize,
 ) -> Result<()> {
+
     const READ: bool = true;
     const WRITE: bool = false;
-
-    let mut f_out = open_file(output, READ)?;
-
-    let mut f_in = open_file(victim, WRITE)?;
+    let mut f_in = open_file(victim, READ)?;
+    let mut f_out = open_file(output, WRITE)?;
 
     f_in.seek(SeekFrom::Start(start))
         .map_err(|err| SigningError::SeekError.context(err))?;
@@ -55,7 +54,7 @@ fn open_file(file: String, rw: bool) -> Result<File> {
         let f_out = OpenOptions::new()
             .write(true)
             .truncate(true)
-            .create_new(true)
+            .create(true)
             .open(file.as_str())
             .map_err(|err| SigningError::OpeningError.context(err))?;
 
@@ -87,6 +86,7 @@ mod test {
             let mut file_tester = OpenOptions::new()
                 .write(true)
                 .truncate(true)
+                .create(true)
                 .open(victim.clone())
                 .expect("Failed to open file");
             file_tester
@@ -112,12 +112,39 @@ mod test {
     }
 
     #[test]
-    fn test_bufferd_cut_out() {
-        let bytes: &[u8] = &[0, 1, 2, 3, 4, 5, 6, 7, 8, 10, 11, 12, 13];
+    fn test_cut_out() {
+        // generate file with known byte content and cut some bytes out,
+        // compare resulting file with bytes
+        let bytes: &[u8] = &[0, 1, 2, 3, 4, 5, 6, 7, 8, 10, 11, 12, 13, 14, 15, 16];
+        // write file with this content
+        let victim = String::from("tmp/test_cut");
+        {
+            let mut file_tester = OpenOptions::new()
+                .write(true)
+                .truncate(true)
+                .create(true)
+                .open(victim.clone())
+                .expect("Failed to open file");
+            file_tester
+                .write_all(&bytes)
+                .expect("Failed to write to file");
+        }
+        // cut bytes from this file
+        let output = String::from("tmp/test_cut_out");
+        cut_out_bytes(victim, output.clone(), 5, 4, 1).expect("Failed to cut");
 
-        /*let output_bytes = cut_out_bytes(2,3, vicitim_bytes).expect("Failed to cut");
+        // read content of output
+        let mut output_bytes = vec![0,0,0,0];
+        let mut file_tested = OpenOptions::new()
+            .read(true)
+            .open(output)
+            .expect("Failed to open ouput file");
+        file_tested
+            .read( &mut output_bytes)
+            .expect("Failed to read file");
 
-        assert_eq!(output_bytes, &bytes[2..5]);*/
+        println!("{:?}", output_bytes );
+        assert_eq!( output_bytes, &bytes[5..9]);
     }
 
 }
