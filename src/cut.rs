@@ -71,27 +71,44 @@ mod test {
     use std::iter;
 
     #[test]
-    fn test_cut_out_bytes() {
+    fn test_open_files() {
+        // generate test file with random content, read it once manually and once
+        // with the tested function, compare the content
+        
+        // random content generation
         let mut rng = rand::thread_rng();
         let testvec: Vec<u8> = iter::repeat(1)
             .take(1000)
             .map(|_| rng.gen_range(1, 15))
             .collect::<Vec<u8>>();
-
-            let victim = String::from("tmp/test_bytes");
+        // write file with this content
+        let victim = String::from("tmp/test_bytes");
         {
             let mut file_tester = OpenOptions::new()
                 .write(true)
                 .truncate(true)
-                .create_new(true)
                 .open(victim.clone())
                 .expect("Failed to open file");
             file_tester
                 .write_all(&testvec)
                 .expect("Failed to write to file");
         }
-        let file_tested = open_file(format!("{}-tested", victim), false);
-        //assert_eq!(open_file(victim, false) );
+        // read the generated file
+        let mut file_tested = open_file(victim.clone(), true).expect("Failed to open tested File");
+        let mut file_tester = OpenOptions::new()
+            .read(true)
+            .open(victim)
+            .expect("Failed to open file");
+        let mut content_tested = Vec::new();
+        let mut content_tester = Vec::new();
+        file_tested
+            .read(&mut content_tested)
+            .expect("Failed to read tested File");
+        file_tester
+            .read(&mut content_tester)
+            .expect("Failed to read Tester-File");
+        // compare read content
+        assert_eq!(content_tested, content_tester);
     }
 
     #[test]
