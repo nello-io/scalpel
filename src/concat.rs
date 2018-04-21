@@ -82,7 +82,8 @@ mod test {
     #[test]
     fn test_append_signature() {
         let sig = Signature::new();
-        // random content generation
+        
+        //random content generation
         let mut rng = rand::thread_rng();
         let byte_victim = iter::repeat(1)
             .take(1000)
@@ -91,8 +92,8 @@ mod test {
         let signature = Signature::sign_file(sig.keypair.unwrap(), &byte_victim );
         let path_victim = Path::new("tmp/test_bytes");
         append_signature( &path_victim , &signature).expect("Appending signature failed.");
-
-        // open signed file and compare signature
+        
+        // open signed file and compare signature, path is hardcoded
         let path_victim = Path::new("tmp/test_bytes-signed");
         let mut f_in = OpenOptions::new()
             .read(true)
@@ -112,7 +113,26 @@ mod test {
 
     #[test]
     fn test_read_to_bytes(){
-        let path_victim = Path::new("tmp/test_bytes");
-        read_to_bytes(path_victim).expect("Reading to bytes failed.");
+        // random content generation
+        let mut rng = rand::thread_rng();
+        let ref_bytes = iter::repeat(1)
+            .take(1000)
+            .map(|_| rng.gen_range(1, 255))
+            .collect::<Bytes>();
+        let path = Path::new("tmp/test_bytes");
+        {
+            // write content to file
+            let mut file = OpenOptions::new()
+                .write(true)
+                .truncate(true)
+                .create(true)
+                .open( &path )
+                .expect("Failed to open file");
+            file.write( &ref_bytes).expect("Failed to write bytes");
+        }
+        
+        // read file and compare
+        let read_bytes = read_to_bytes(path).expect("Reading to bytes failed.");
+        assert_eq!(read_bytes, ref_bytes);
     }
 }
