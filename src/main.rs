@@ -30,7 +30,7 @@ scalpel
 Usage:
   scalpel cut [--fragment=<fragment>] [--start=<start>] --end=<end> --output=<output> <victimfile>
   scalpel cut [--fragment=<fragment>] [--start=<start>] --size=<size> --output=<output> <victimfile>
-  scalpel sign <victimfile>
+  scalpel sign <victimfile> <keyfile>
   scalpel (-h | --help)
   scalpel (-v |--version)
 
@@ -45,7 +45,6 @@ Options:
   --end=<end>      The end byte offset which will not be included.
   --size=<size>    Alternate way to sepcify the <end> combined with start.
   --fragment=<fragment>  Define the size of the fragment/chunk to read/write at once.
-  --sign    sign and verify a binary
 ";
 
 #[derive(Debug, Deserialize)]
@@ -58,6 +57,7 @@ struct Args {
     flag_fragment: Option<usize>,
     flag_output: String,
     arg_victimfile: String,
+    arg_keyfile: String,
     flag_version: bool,
     flag_help: bool,
 }
@@ -84,9 +84,10 @@ fn main() {
         let path_victim = Path::new(&args.arg_victimfile);
         let byte_victim = match concat::read_to_bytes(path_victim){
             Ok(bytes) => bytes,
-            Err(_) => std::process::exit(77),
+            Err(_) => std::process::exit(77), // TODO stop codes
         };
 
+        // TODO get key from input file instead of creating a new one
         let sig = Signature::new();
         // get signature of file
         let signature = Signature::sign_file(sig.keypair.unwrap(), &byte_victim);
