@@ -24,7 +24,8 @@ pub fn append_signature(path: &Path, sig: &signature::Signature) -> Result<()> {
     // create output file
     let mut f_out = OpenOptions::new()
         .write(true)
-        .create_new(true)
+        .truncate(true)
+        .create(true)
         .open(Path::new(&file_sig))
         .map_err(|err| SigningError::OpeningError.context(err))?;
 
@@ -69,16 +70,45 @@ pub fn read_to_bytes(path: &Path) -> Result<Bytes> {
     Ok(Bytes::from(content))
 }
 
-/*#[cfg(test)]
+#[cfg(test)]
 mod test {
+    extern crate rand;
     use super::*;
+    use self::rand::Rng;
+    use std::iter;
+    use signature::*;
+    use std::io::{Seek, SeekFrom};
     
-    /*#[test]
+    #[test]
     fn test_append_signature() {
+        let sig = Signature::new();
+        // random content generation
+        let mut rng = rand::thread_rng();
+        let byte_victim = iter::repeat(1)
+            .take(1000)
+            .map(|_| rng.gen_range(1, 255))
+            .collect::<Bytes>();
+        let signature = Signature::sign_file(sig.keypair.unwrap(), &byte_victim );
         let path_victim = Path::new("tmp/test_bytes");
         append_signature( &path_victim , &signature).expect("Appending signature failed.");
 
-    }*/
+        // open signed file and compare signature
+        let path_victim = Path::new("tmp/test_bytes-signed");
+        let mut f_in = OpenOptions::new()
+            .read(true)
+            .open(&path_victim)
+            .expect("Failed to read signed File");
+        // read from end of file for the length of singature
+        let ref_sig = signature.as_ref();
+        let mut read_sig = vec![0 ; ref_sig.len() ]; 
+
+        f_in.seek(SeekFrom::End( -(ref_sig.len() as i64) )).expect("Failed to seek from end");
+        f_in.read( &mut read_sig ).expect("Failed to Read Signature");
+        println!("{}", read_sig.len());
+        
+        assert_eq!(ref_sig[..], read_sig[..] );
+
+    }
 
     #[test]
     fn test_read_to_bytes(){
@@ -86,4 +116,3 @@ mod test {
         read_to_bytes(path_victim).expect("Reading to bytes failed.");
     }
 }
-*/
