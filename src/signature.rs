@@ -7,8 +7,6 @@ use std::path::Path;
 use std::io::Read;
 use std::fs::OpenOptions;
 use errors::*;
-use failure::Fail;
-use pem::parse;
 
 pub struct Signature {
     pub keypair: Option<signature::Ed25519KeyPair>,
@@ -55,10 +53,9 @@ impl Signature {
         file.read_to_end(&mut content)
             .map_err(|err| SigningError::ReadingError.context(err))?;
 
-        let pem = parse( &content ).unwrap();
         // get keypair
         let pkcs8_keys = signature::Ed25519KeyPair::
-                from_pkcs8_maybe_unchecked(untrusted::Input::from(&pem.contents))
+                from_pkcs8(untrusted::Input::from(&content))
                 .map_err(|err| SigningError::ParsePemError.context(err))?;
         // return
         Ok(Signature{ keypair: Some(pkcs8_keys) })
