@@ -89,7 +89,7 @@ fn main() {
         };
 
         let key_path = Path::new(&args.arg_keyfile);
-        let keys = match Signature::read_pem(&key_path) {
+        let keys = match Signature::read_key(&key_path) {
             Ok(key) => key,
             Err(e) => {
                 error!("{}", e);

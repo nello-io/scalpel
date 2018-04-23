@@ -42,7 +42,7 @@ impl Signature {
     }
 
     /// read key from file and return a Signature
-    pub fn read_pem(path_file: &Path) -> Result<Signature> {
+    pub fn read_key(path_file: &Path) -> Result<Signature> {
         // open file
         let mut file = OpenOptions::new()
             .read(true)
