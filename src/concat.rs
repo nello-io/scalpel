@@ -10,7 +10,7 @@ use errors::*;
 pub fn append_signature(path: &Path, sig: &signature::Signature) -> Result<()> {
     // get file
     let file = path.to_str()
-        .ok_or::<Error>(SigningError::OpeningError.into())?;
+        .ok_or::<Error>(SigningError::PathError.into())?;
 
     // open output file, add "-signed" to name
     let file_split: Vec<&str> = file.rsplitn(2, '.').collect();
