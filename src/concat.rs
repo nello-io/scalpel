@@ -6,20 +6,26 @@ use bytes::Bytes;
 
 use errors::*;
 
-/// takes a file and creates a copy with signature appended
-pub fn append_signature(path: &Path, sig: &signature::Signature) -> Result<()> {
+/// open output file, add "-signed" to name
+pub fn derive_output_filename(path : &Path) -> Result<String> {
+
     // get file
-    let file = path.to_str()
+    let filename = path.to_str()
         .ok_or::<Error>(SigningError::PathError.into())?;
 
-    // open output file, add "-signed" to name
-    let file_split: Vec<&str> = file.rsplitn(2, '.').collect();
-    let file_sig;
-    if file_split.len() > 1 {
-        file_sig = format!("{}-signed.{}", file_split[1], file_split[0]);
+    let file_split: Vec<&str> = filename.rsplitn(2, '.').collect();
+    
+    Ok(if file_split.len() > 1 {
+        format!("{}-signed.{}", file_split[1], file_split[0])
     } else {
-        file_sig = format!("{}-signed", file_split[0]);
-    }
+        format!("{}-signed", file_split[0])
+    })
+}
+
+/// takes a file and creates a copy with signature appended
+pub fn append_signature(path: &Path, sig: &signature::Signature) -> Result<()> {
+
+    let file_sig = derive_output_filename(path)?;
 
     // create output file
     let mut f_out = OpenOptions::new()
@@ -89,7 +95,7 @@ mod test {
             .take(1000)
             .map(|_| rng.gen_range(1, 255))
             .collect::<Bytes>();
-        let signature = Signature::sign_file(sig.keypair.unwrap(), &byte_victim );
+        let signature = sig.calculate_signature_from_bytes(&byte_victim).expect("Failed signature from bytes");
         let path_victim = Path::new("tmp/test_bytes");
         append_signature( &path_victim , &signature).expect("Appending signature failed.");
         

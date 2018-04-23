@@ -10,6 +10,8 @@ extern crate pem;
 extern crate ring;
 extern crate serde;
 
+extern crate base64;
+
 #[macro_use]
 extern crate failure;
 
@@ -97,7 +99,7 @@ fn main() {
                 std::process::exit(77);
             }
         };
-        let signature = Signature::sign_file(keys.keypair.unwrap(), &byte_victim);
+        let signature = keys.calculate_signature_from_bytes(&byte_victim).expect("We should have read a key earlier");
 
         // create signed file
         if let Err(e) = concat::append_signature(&path_victim, &signature) {
