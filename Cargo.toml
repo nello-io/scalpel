@@ -16,6 +16,7 @@ untrusted = "0.5.1"
 
 failure = "*"
 failure_derive = "*"
+pem = "0.5"
 
 [dev-dependencies]
 rand = "*"

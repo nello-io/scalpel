@@ -20,4 +20,7 @@ pub enum SigningError {
 
     #[fail(display = "Failed to seek from start")]
     SeekError,
+
+    #[fail(display = "Failed to parse Keys from .pem")]
+    ParsePemError,
 }

@@ -2,7 +2,6 @@ use std::fs::{File, OpenOptions};
 use std::io::{Read, Seek, SeekFrom, Write};
 
 use errors::*;
-//use failure::Fail;
 
 pub fn cut_out_bytes(
     victim: String,
