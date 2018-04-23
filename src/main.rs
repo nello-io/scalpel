@@ -88,7 +88,6 @@ fn main() {
             Err(_) => std::process::exit(77), // TODO stop codes
         };
 
-        // TODO get key from input file instead of creating a new one
         let key_path = Path::new(&args.arg_keyfile);
         let keys = match Signature::read_pem(&key_path) {
             Ok(key) => key,
@@ -128,7 +127,6 @@ fn main() {
         } else if let Some(size) = args.flag_size {
             size
         } else {
-            //TODO: error message reasonable?
             error!("end addr should be larger than start addr");
             std::process::exit(36);
         };

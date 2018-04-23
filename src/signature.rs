@@ -61,32 +61,3 @@ impl Signature {
         Ok(Signature{ keypair: Some(pkcs8_keys) })
     }
 }
-
-
-#[cfg(test)]
-mod test {
-    extern crate pem;
-    use super::*;
-    use pem::*;
-    use std::io::Write;
-
-    #[test]
-    fn test_keys() {
-        let sig = Signature::new();
-        let pem_public = Pem {
-            tag: String::from("Public Key"),
-            contents: Vec::from(sig.keypair.unwrap().public_key_bytes()),
-        };
-
-        let pem_string = encode(&pem_public);
-        let mut file = OpenOptions::new()
-            .write(true)
-            .truncate(true)
-            .create(true)
-            .open("tmp/publicKey_test.pem")
-            .expect("Failed to create public key file");
-
-        file.write( pem_string.as_bytes() ).expect("Failed to write publix key to file");
-        
-    }
-}
