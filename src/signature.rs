@@ -158,12 +158,12 @@ impl Signer {
             .map_err(|err| SigningError::OpeningError.context(err))?;
 
         let mut content = Vec::new();
-        file.read_to_end(&mut content)
+        file.read(&mut content)
             .map_err(|err| SigningError::ReadingError.context(err))?;
 
         // get keypair
         let pkcs8_keys = signature::Ed25519KeyPair::
-                from_pkcs8(untrusted::Input::from(&content))
+                from_pkcs8_maybe_unchecked(untrusted::Input::from(&content))
                 .map_err(|err| SigningError::ParsePk8Error.context(err))?;
         // return
         Ok(Signer{ keypair: Some(pkcs8_keys) })
@@ -180,7 +180,7 @@ mod test {
     use ::concat::*;
 
     #[test]
-    fn test_keys() {
+    fn test_keys_pem() {
         let signer = Signer::read_pem(Path::new("./tmp/ed25519_keypair.pem")).expect("Should work right?");
 
         let signature = signer.calculate_signature("./tmp/signme.bin").expect("Signing failed");
@@ -193,22 +193,14 @@ mod test {
     }
 
     #[test]
-    fn test_keys2() {
-        let sig = Signer::new();
-        /*let pem_public = Pem {
-            tag: String::from("Public Key"),
-            contents: Vec::from(sig.keypair.unwrap().public_key_bytes()),
-        };
+    fn test_keys_pk8() {
+        let signer = Signer::read_pk8(Path::new("./tmp/ed25519_public.pk8")).expect("Should work right?");
 
-        //let pem_string = encode(&pem_public);
-        let mut file = OpenOptions::new()
-            .write(true)
-            .truncate(true)
-            .create(true)
-            .open("tmp/publicKey_test.pem")
-            .expect("Failed to create public key file");
+        let signature = signer.calculate_signature("./tmp/signme.bin").expect("Signing failed");
 
-        file.write( pem_string.as_bytes() ).expect("Failed to write public key to file");
-        */
+        append_signature(Path::new("./tmp/signme.bin"), &signature).expect("Failed to append signature");
+        
+        // 
+        assert!(signer.verify_file(Path::new("./tmp/signme-signed.bin")).is_ok());
     }
 }
