@@ -87,7 +87,7 @@ mod test {
     
     #[test]
     fn test_append_signature() {
-        let sig = Signature::new();
+        let sig = Signer::new();
         
         //random content generation
         let mut rng = rand::thread_rng();

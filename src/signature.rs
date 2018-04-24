@@ -8,17 +8,15 @@ use std::io::Read;
 use std::fs::OpenOptions;
 use errors::*;
 use failure::Fail;
-use pem::{Pem,parse_many};
-use base64;
 
-pub struct Signature {
+pub struct Signer {
     pub keypair: Option<signature::Ed25519KeyPair>,
 }
 
-impl Signature {
+impl Signer {
     pub fn new() -> Self {
         Self {
-            keypair: Signature::generate_ed25519_keypair(),
+            keypair: Signer::generate_ed25519_keypair(),
         }
     }
 
@@ -36,7 +34,7 @@ impl Signature {
         }
     }
 
-    /// sign file with generated keypair
+    /// get signature of file
     pub fn calculate_signature<P>(&self,
         path: P,
     ) -> Result<ring::signature::Signature> where P: AsRef<Path> {
@@ -55,11 +53,10 @@ impl Signature {
         let content = Bytes::from(content);
         let signature = self.calculate_signature_from_bytes(&content)?;
 
-        //file.write( signature.as_ref() )?;
-
         Ok(signature)
     }
 
+    /// get signature for bytes
     pub fn calculate_signature_from_bytes(&self,
         file: &Bytes,
     ) -> Result<ring::signature::Signature> {
@@ -67,30 +64,33 @@ impl Signature {
         if let Some(ref keypair) = self.keypair {
             Ok(keypair.sign(&file))
         } else {
-            // TODO add more error types
-            Err(SigningError::ReadingError.context("No key in here yet").into())
+            Err(SigningError::KeyInitError.context("No key in here yet").into())
         }
     }
 
+    /// verify bytes with provided signature bytes
+    pub fn verify_bytes<B,C>(&self, 
+        bytes_data : B, 
+        bytes_signature : C
+    )-> Result<()> where B : Into<Bytes>, C: Into<Bytes>{
 
-    pub fn verify_bytes<B,C>(&self, bytes_data : B, bytes_signature : C)-> Result<()> where B : Into<Bytes>, C: Into<Bytes>{
         if let Some(ref keypair) = self.keypair {
 
             let bytes_data = bytes_data.into();
             let bytes_signature = bytes_signature.into();
 
             ring::signature::verify(&ring::signature::ED25519,
-            untrusted::Input::from(keypair.public_key_bytes()),
-            untrusted::Input::from(&bytes_data),
-            untrusted::Input::from(&bytes_signature))?;
+                untrusted::Input::from(keypair.public_key_bytes()),
+                untrusted::Input::from(&bytes_data),
+                untrusted::Input::from(&bytes_signature))?;
             Ok(())
         } else {
-            // TODO add more error types
-            Err(SigningError::ReadingError.context("No key in here yet").into())
+            Err(SigningError::KeyInitError.context("No key in here yet").into())
         }
 
     }
 
+    /// verify signature in file with actual signature
     pub fn verify_file<P>(&self, path : P) -> Result<()> where P: AsRef<Path> {
         let path : &Path = path.as_ref();
 
@@ -106,45 +106,15 @@ impl Signature {
         
         if content.len() > 64 {
             let (data, signature) = content.split_at(content.len()-64);
-            self.verify_bytes(data, signature);
+            self.verify_bytes(data, signature)?;
             Ok(())
         } else {
-            panic!("error me up");
+            Err( SigningError::ContentError.context("File to short, no signature included").into())
         }
     }
 
-    /// read key from file and return a Signature
-    pub fn read_pem(path_file: &Path) -> Result<Signature> {
-        // open file
-        let mut file = OpenOptions::new()
-            .read(true)
-            .open(path_file)
-            .map_err(|err| SigningError::OpeningError.context(err))?;
-
-        let mut content = Vec::new();
-        file.read_to_end(&mut content)
-            .map_err(|err| SigningError::ReadingError.context(err))?;
-
-        let mut pems : Vec<Pem> = parse_many( &content );
-
-        let concatenated = pems.into_iter().fold(Vec::<u8>::new(), |mut acc, mut pem| {
-            println!("Key Bytes encoded {}", String::from_utf8_lossy(&pem.contents));
-            println!("Key Bytes encoded {:?}", &pem.contents);
-            //let mut vec = base64::decode(&pem.contents).expect("Hopefully this is base 64");
-            acc.append(&mut pem.contents);
-            acc
-        });
-
-        // get keypair
-        let pkcs8_keys = signature::Ed25519KeyPair::
-                from_pkcs8(untrusted::Input::from(concatenated.as_slice()))
-                .map_err(|err| SigningError::ParsePemError.context("Failed to create keypair from pkcs8").context(err))?;
-
-        Ok(Signature{ keypair: Some(pkcs8_keys) })
-    } 
-
     /// read key from pkcs8 file (raw bytes, no encoding) and return a Signature
-    pub fn read_pk8(path_file: &Path) -> Result<Signature> {
+    pub fn read_pk8(path_file: &Path) -> Result<Signer> {
         // open file
         let mut file = OpenOptions::new()
             .read(true)
@@ -158,9 +128,9 @@ impl Signature {
         // get keypair
         let pkcs8_keys = signature::Ed25519KeyPair::
                 from_pkcs8(untrusted::Input::from(&content))
-                .map_err(|err| SigningError::ParsePemError.context(err))?;
+                .map_err(|err| SigningError::ParsePk8Error.context(err))?;
         // return
-        Ok(Signature{ keypair: Some(pkcs8_keys) })
+        Ok(Signer{ keypair: Some(pkcs8_keys) })
     }
 }
 
@@ -169,14 +139,13 @@ impl Signature {
 mod test {
     extern crate pem;
     use super::*;
-    use pem::*;
     use std::io::Write;
 
     use ::concat::*;
 
     #[test]
-    fn test_keys() {
-        let signer = Signature::read_pem(Path::new("./tmp/test_keypair.pem")).expect("Should work right?");
+    fn test_rsa_keys() {
+        let signer = Signer::read_pk8(Path::new("./tmp/test_keypair.pem")).expect("Should work right?");
 
         let signature = signer.calculate_signature("./tmp/signme.bin").expect("Signing failed");
 
@@ -189,13 +158,13 @@ mod test {
 
     #[test]
     fn test_keys2() {
-        let sig = Signature::new();
-        let pem_public = Pem {
+        let sig = Signer::new();
+        /*let pem_public = Pem {
             tag: String::from("Public Key"),
             contents: Vec::from(sig.keypair.unwrap().public_key_bytes()),
         };
 
-        let pem_string = encode(&pem_public);
+        //let pem_string = encode(&pem_public);
         let mut file = OpenOptions::new()
             .write(true)
             .truncate(true)
@@ -203,7 +172,7 @@ mod test {
             .open("tmp/publicKey_test.pem")
             .expect("Failed to create public key file");
 
-        file.write( pem_string.as_bytes() ).expect("Failed to write publix key to file");
-        
+        file.write( pem_string.as_bytes() ).expect("Failed to write public key to file");
+        */
     }
 }

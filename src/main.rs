@@ -6,7 +6,6 @@ extern crate untrusted;
 extern crate serde_derive;
 extern crate bytes;
 extern crate docopt;
-extern crate pem;
 extern crate ring;
 extern crate serde;
 
@@ -84,6 +83,7 @@ fn main() {
     } else if args.cmd_sign {
         // command sign
 
+        // TODO give option for input key as file (pk8), bytes or generate new keys
         let path_victim = Path::new(&args.arg_victimfile);
         let byte_victim = match concat::read_to_bytes(path_victim) {
             Ok(bytes) => bytes,
@@ -92,7 +92,7 @@ fn main() {
 
         // TODO get key from input file instead of creating a new one
         let key_path = Path::new(&args.arg_keyfile);
-        let keys = match Signature::read_pem(&key_path) {
+        let keys = match Signer::read_pk8(&key_path) {
             Ok(key) => key,
             Err(e) => {
                 error!("{}", e);
