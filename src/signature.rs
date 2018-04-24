@@ -142,6 +142,26 @@ impl Signature {
 
         Ok(Signature{ keypair: Some(pkcs8_keys) })
     } 
+
+    /// read key from pkcs8 file (raw bytes, no encoding) and return a Signature
+    pub fn read_pk8(path_file: &Path) -> Result<Signature> {
+        // open file
+        let mut file = OpenOptions::new()
+            .read(true)
+            .open(path_file)
+            .map_err(|err| SigningError::OpeningError.context(err))?;
+
+        let mut content = Vec::new();
+        file.read_to_end(&mut content)
+            .map_err(|err| SigningError::ReadingError.context(err))?;
+
+        // get keypair
+        let pkcs8_keys = signature::Ed25519KeyPair::
+                from_pkcs8(untrusted::Input::from(&content))
+                .map_err(|err| SigningError::ParsePemError.context(err))?;
+        // return
+        Ok(Signature{ keypair: Some(pkcs8_keys) })
+    }
 }
 
 
