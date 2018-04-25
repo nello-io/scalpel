@@ -22,6 +22,7 @@ mod cut;
 mod concat;
 mod errors;
 
+// TODO use common_failures
 const USAGE: &'static str = "
 scalpel
 
