@@ -117,6 +117,18 @@ fn main() {
             std::process::exit(77);
         }
 
+        // test the verification
+        let signed_filename = concat::derive_output_filename(path_victim)
+            .unwrap_or_else(|err| {
+                error!("Failed to derive file name of signed file: {:?}", err);
+                std::process::exit(77);}
+            );
+        keys.verify_file(Path::new(&signed_filename))
+            .unwrap_or_else(|err| {
+                error!("Failed to verify: {:?}", err);
+                std::process::exit(77);}
+            );
+
         info!("singing succeeded.");
         std::process::exit(0);
     } else if args.cmd_cut {
