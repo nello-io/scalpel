@@ -1,5 +1,9 @@
 // add external crate pem to main.rs
 use pem::{Pem,parse_many};
+// add this error to errors.rs
+    #[fail(display = "Failed to parse Keys from .pem")]
+    ParsePemError,
+
 
     /// Function from signature::signer to get Ed25519 Keypair from a .pem file
     /// read key from file and return a Signature

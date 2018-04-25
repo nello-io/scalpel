@@ -24,9 +24,6 @@ pub enum SigningError {
     #[fail(display = "Failed to parse Keys from .pk8")]
     ParsePk8Error,
     
-    #[fail(display = "Failed to parse Keys from .pem")]
-    ParsePemError,
-
     #[fail(display = "There is no key in this Signer yet")]
     KeyInitError,
 
