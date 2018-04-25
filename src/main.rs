@@ -83,22 +83,14 @@ fn main() {
         // command sign
 
         let path_victim = Path::new(&args.arg_victimfile);
-        let byte_victim = match concat::read_to_bytes(path_victim) {
-            Ok(bytes) => bytes,
-            Err(e) => { 
-                error!("{}", e);
-                std::process::exit(77)}, // TODO stop codes
-        };
 
         let keys = if args.flag_format == String::from("pkcs8") {
             let key_path = Path::new(&args.arg_keyfile);
-            match Signer::read_pk8(&key_path) {
-                Ok(key) => key,
-                Err(e) => {
-                    error!("{}", e);
+            Signer::read_pk8(&key_path).unwrap_or_else( |e|
+                {   error!("{}", e);
                     std::process::exit(77);
                 }
-            }
+            )
         } else if args.flag_format == String::from("pem") {
             unimplemented!();
         } else if args.flag_format == String::from("bytes") {
@@ -107,8 +99,11 @@ fn main() {
             println!("File format for key not recognized, use one of the specified formats");
             std::process::exit(1);
         };
-        let signature = keys.calculate_signature_from_bytes(&byte_victim)
-            .expect("We should have read a key earlier");
+    
+        let signature = keys.calculate_signature(path_victim).unwrap_or_else(|err| {
+            error!("{}", err);
+            std::process::exit(77);
+        });
 
         // create signed file
         if let Err(e) = concat::append_signature(&path_victim, &signature) {
@@ -117,16 +112,15 @@ fn main() {
         }
 
         // test the verification
-        let signed_filename = concat::derive_output_filename(path_victim)
-            .unwrap_or_else(|err| {
-                error!("Failed to derive file name of signed file: {:?}", err);
-                std::process::exit(77);}
-            );
+        let signed_filename = concat::derive_output_filename(path_victim).unwrap_or_else(|err| {
+            error!("Failed to derive file name of signed file: {:?}", err);
+            std::process::exit(77);
+        });
         keys.verify_file(Path::new(&signed_filename))
             .unwrap_or_else(|err| {
                 error!("Failed to verify: {:?}", err);
-                std::process::exit(77);}
-            );
+                std::process::exit(77);
+            });
 
         info!("singing succeeded.");
         std::process::exit(0);
