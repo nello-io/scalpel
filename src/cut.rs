@@ -10,7 +10,6 @@ pub fn cut_out_bytes(
     size: u64,
     fragment_size: usize,
 ) -> Result<()> {
-
     const READ: bool = true;
     const WRITE: bool = false;
     let mut f_in = open_file(victim, READ)?;
@@ -72,7 +71,7 @@ mod test {
     fn test_open_files() {
         // generate test file with random content, read it once manually and once
         // with the tested function, compare the content
-        
+
         // random content generation
         let mut rng = rand::thread_rng();
         let testvec: Vec<u8> = iter::repeat(1)
@@ -133,17 +132,17 @@ mod test {
         cut_out_bytes(victim, output.clone(), 5, 4, 1).expect("Failed to cut");
 
         // read content of output
-        let mut output_bytes = vec![0,0,0,0];
+        let mut output_bytes = vec![0, 0, 0, 0];
         let mut file_tested = OpenOptions::new()
             .read(true)
             .open(output)
             .expect("Failed to open ouput file");
         file_tested
-            .read( &mut output_bytes)
+            .read(&mut output_bytes)
             .expect("Failed to read file");
 
-        println!("{:?}", output_bytes );
-        assert_eq!( output_bytes, &bytes[5..9]);
+        println!("{:?}", output_bytes);
+        assert_eq!(output_bytes, &bytes[5..9]);
     }
 
 }

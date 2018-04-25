@@ -31,7 +31,7 @@ scalpel
 Usage:
   scalpel cut [--fragment=<fragment>] [--start=<start>] --end=<end> --output=<output> <victimfile>
   scalpel cut [--fragment=<fragment>] [--start=<start>] --size=<size> --output=<output> <victimfile>
-  scalpel sign <victimfile> <keyfile>
+  scalpel sign <victimfile> <keyfile> --format=<informat>
   scalpel (-h | --help)
   scalpel (-v |--version)
 
@@ -46,6 +46,7 @@ Options:
   --end=<end>      The end byte offset which will not be included.
   --size=<size>    Alternate way to sepcify the <end> combined with start.
   --fragment=<fragment>  Define the size of the fragment/chunk to read/write at once.
+  --format=<informat>   specify the key format, eihter pkcs8, pem or bytes
 ";
 
 #[derive(Debug, Deserialize)]
@@ -59,6 +60,7 @@ struct Args {
     flag_output: String,
     arg_victimfile: String,
     arg_keyfile: String,
+    flag_format: String,
     flag_version: bool,
     flag_help: bool,
 }
@@ -83,23 +85,31 @@ fn main() {
     } else if args.cmd_sign {
         // command sign
 
-        // TODO give option for input key as file (pk8), bytes or generate new keys
         let path_victim = Path::new(&args.arg_victimfile);
         let byte_victim = match concat::read_to_bytes(path_victim) {
             Ok(bytes) => bytes,
             Err(_) => std::process::exit(77), // TODO stop codes
         };
 
-        // TODO get key from input file instead of creating a new one
-        let key_path = Path::new(&args.arg_keyfile);
-        let keys = match Signer::read_pk8(&key_path) {
-            Ok(key) => key,
-            Err(e) => {
-                error!("{}", e);
-                std::process::exit(77);
+        let keys = if args.flag_format == String::from("pkcs8") {
+            let key_path = Path::new(&args.arg_keyfile);
+            match Signer::read_pk8(&key_path) {
+                Ok(key) => key,
+                Err(e) => {
+                    error!("{}", e);
+                    std::process::exit(77);
+                }
             }
+        } else if args.flag_format == String::from("pem") {
+            unimplemented!();
+        } else if args.flag_format == String::from("bytes") {
+            unimplemented!();
+        } else {
+            println!("File format for key not recognized, use one of the specified formats");
+            std::process::exit(1);
         };
-        let signature = keys.calculate_signature_from_bytes(&byte_victim).expect("We should have read a key earlier");
+        let signature = keys.calculate_signature_from_bytes(&byte_victim)
+            .expect("We should have read a key earlier");
 
         // create signed file
         if let Err(e) = concat::append_signature(&path_victim, &signature) {
