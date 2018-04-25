@@ -153,7 +153,8 @@ mod test {
     #[test]
     fn test_keys_pk8() {
         let signer =
-            Signer::read_pk8(Path::new("./tmp/ed25519_keypair.pk8")).expect("Should work right?"); //./tmp/ed25519_private-2.pk8
+            Signer::read_pk8(Path::new("./tmp/ed25519_keypair.pk8"))
+                .expect("Failed to read pk8 keys from file");
 
         let signature = signer
             .calculate_signature("./tmp/signme.bin")
