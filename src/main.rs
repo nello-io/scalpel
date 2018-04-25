@@ -28,13 +28,13 @@ scalpel
 Usage:
   scalpel cut [--fragment=<fragment>] [--start=<start>] --end=<end> --output=<output> <victimfile>
   scalpel cut [--fragment=<fragment>] [--start=<start>] --size=<size> --output=<output> <victimfile>
-  scalpel sign <victimfile> <keyfile> --format=<informat>
+  scalpel sign <victimfile> <keyfile> --format=<format>
   scalpel (-h | --help)
   scalpel (-v |--version)
 
 Commands:
   cut   extract bytes from a binary file
-  sign  sign binary with ED25519 Key Pair, key has to be a .pem file
+  sign  sign binary with ED25519 Key Pair
 
 Options:
   -h --help     Show this screen.
@@ -43,7 +43,7 @@ Options:
   --end=<end>      The end byte offset which will not be included.
   --size=<size>    Alternate way to sepcify the <end> combined with start.
   --fragment=<fragment>  Define the size of the fragment/chunk to read/write at once.
-  --format=<informat>   specify the key format, eihter pkcs8, pem or bytes
+  --format=<format>   specify the key format, eihter pkcs8, pem or bytes
 ";
 
 #[derive(Debug, Deserialize)]
@@ -85,7 +85,9 @@ fn main() {
         let path_victim = Path::new(&args.arg_victimfile);
         let byte_victim = match concat::read_to_bytes(path_victim) {
             Ok(bytes) => bytes,
-            Err(_) => std::process::exit(77), // TODO stop codes
+            Err(e) => { 
+                error!("{}", e);
+                std::process::exit(77)}, // TODO stop codes
         };
 
         let keys = if args.flag_format == String::from("pkcs8") {
@@ -110,7 +112,7 @@ fn main() {
 
         // create signed file
         if let Err(e) = concat::append_signature(&path_victim, &signature) {
-            error!("Failed to sign {:?}", e);
+            error!("Failed to sign: {:?}", e);
             std::process::exit(77);
         }
 
@@ -149,8 +151,7 @@ fn main() {
         } else if let Some(size) = args.flag_size {
             size
         } else {
-            //TODO: error message reasonable?
-            error!("end addr should be larger than start addr");
+            error!("either end addr or size has to be specified");
             std::process::exit(36);
         };
         let fragment_size = args.flag_fragment.unwrap_or(8192) as usize; // CHUNK from cut
