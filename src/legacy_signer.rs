@@ -1,8 +1,8 @@
 // add external crate pem to main.rs
 use pem::{Pem,parse_many};
 
-/// Function from signature::signer to get Ed25519 Keypair from a .pem file
-/// read key from file and return a Signature
+    /// Function from signature::signer to get Ed25519 Keypair from a .pem file
+    /// read key from file and return a Signature
     pub fn read_pem(path_file: &Path) -> Result<Signer> {
         // open file
         let mut file = OpenOptions::new()
@@ -18,7 +18,8 @@ use pem::{Pem,parse_many};
         let pems : Vec<Pem> = parse_many( &content );
         // concatenat the private and public for signature::Ed25519KeyPair::from_pkcs8
         // is not valid format for from_pkcs8, not sure what it expects
-        let concatenated = pems.iter().fold(Vec::<u8>::new(), |mut acc, mut pem| {
+        let concatenated = pems.iter().fold(Vec::<u8>::new(), |mut acc, pem| {
+            println!("Tag: {}", &pem.tag);
             acc.append(&mut pem.contents.clone());
             acc
         });
