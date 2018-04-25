@@ -1,34 +1,47 @@
-#[macro_use] extern crate log;
+#[macro_use]
+extern crate log;
 extern crate env_logger;
-
-
+extern crate untrusted;
 #[macro_use]
 extern crate serde_derive;
+extern crate bytes;
 extern crate docopt;
+extern crate pem;
+extern crate ring;
+extern crate serde;
+
+#[macro_use]
+extern crate failure;
 
 use docopt::Docopt;
+use std::path::Path;
 
+mod signature;
+use signature::*;
 
+mod cut;
+mod concat;
+mod errors;
 
-use std::fs::*;
-
-
-use std::io::{Write,Read,Seek,SeekFrom};
-
-
+// TODO add key as argument to sign
 const USAGE: &'static str = "
 scalpel
 
 Usage:
-  scalpel [--fragment=<fragment>] [--start=<start>] --end=<end> --output=<output> <victimfile>
-  scalpel [--fragment=<fragment>] [--start=<start>] --size=<size> --output=<output> <victimfile>
+  scalpel cut [--fragment=<fragment>] [--start=<start>] --end=<end> --output=<output> <victimfile>
+  scalpel cut [--fragment=<fragment>] [--start=<start>] --size=<size> --output=<output> <victimfile>
+  scalpel sign <victimfile> <keyfile>
   scalpel (-h | --help)
   scalpel (-v |--version)
 
+Commands:
+  cut   extract bytes from a binary file
+  sign  sign binary with ED25519 Key Pair, key has to be a .pem file
+
 Options:
   -h --help     Show this screen.
-  --version     Show version.
-  --start=<start>  Start byte offset of the section to cut out.
+  -v --version     Show version.
+  --start=<start>  Start byte offset of the section to cut out. If omitted, set to 0.
   --end=<end>      The end byte offset which will not be included.
   --size=<size>    Alternate way to sepcify the <end> combined with start.
   --fragment=<fragment>  Define the size of the fragment/chunk to read/write at once.
@@ -36,30 +49,78 @@ Options:
 
 #[derive(Debug, Deserialize)]
 struct Args {
+    cmd_cut: bool,
+    cmd_sign: bool,
     flag_start: Option<u64>,
     flag_end: Option<u64>,
     flag_size: Option<u64>,
     flag_fragment: Option<usize>,
     flag_output: String,
     arg_victimfile: String,
+    arg_keyfile: String,
+    flag_version: bool,
+    flag_help: bool,
 }
+
+const VERSION: &'static str = env!("CARGO_PKG_VERSION");
+const NAME: &'static str = env!("CARGO_PKG_NAME");
 
 fn main() {
     env_logger::init();
 
     let args: Args = Docopt::new(USAGE)
-                            .and_then(|d| d.deserialize())
-                            .unwrap_or_else(|e| e.exit());
+        .and_then(|d| d.deserialize())
+        .unwrap_or_else(|e| e.exit());
 
-    let start = args.flag_start.unwrap_or(0) as u64;
-    let size : u64 =
-        if let Some(end) = args.flag_end {
+    // check arguments
+    if args.flag_version {
+        println!("{} {}", NAME, VERSION);
+        std::process::exit(0);
+    } else if args.flag_help {
+        println!("{}", USAGE);
+        std::process::exit(0);
+    } else if args.cmd_sign {
+        // command sign
+
+        let path_victim = Path::new(&args.arg_victimfile);
+        let byte_victim = match concat::read_to_bytes(path_victim) {
+            Ok(bytes) => bytes,
+            Err(_) => std::process::exit(77), // TODO stop codes
+        };
+
+        let key_path = Path::new(&args.arg_keyfile);
+        let keys = match Signature::read_key(&key_path) {
+            Ok(key) => key,
+            Err(e) => {
+                error!("{}", e);
+                std::process::exit(77);
+            }
+        };
+        let signature = Signature::sign_file(keys.keypair.unwrap(), &byte_victim);
+
+        // create signed file
+        if let Err(e) = concat::append_signature(&path_victim, &signature) {
+            error!("Failed to sign {:?}", e);
+            std::process::exit(77);
+        }
+
+        info!("singing succeeded.");
+        std::process::exit(0);
+    } else if args.cmd_cut {
+        // command cut
+
+        // do input handling
+        let start = args.flag_start.unwrap_or(0) as u64; // if none, set to 0
+        let size: u64 = if let Some(end) = args.flag_end {
             if let Some(_) = args.flag_size {
-                error!("Either end of size has to be specified, not both");
+                error!("Either end or size has to be specified, not both");
                 std::process::exit(31);
             }
             if start >= end {
-                error!("end addr {1} should be larger than start addr {0}", start, end);
+                error!(
+                    "end addr {1} should be larger than start addr {0}",
+                    start, end
+                );
                 std::process::exit(34);
             }
             end - start
@@ -69,53 +130,17 @@ fn main() {
             error!("end addr should be larger than start addr");
             std::process::exit(36);
         };
+        let fragment_size = args.flag_fragment.unwrap_or(8192) as usize; // CHUNK from cut
 
-    let victim = args.arg_victimfile;
-    let output = args.flag_output;
-
-
-    let mut f_out = OpenOptions::new()
-                                    .write(true)
-                                    .truncate(true)
-                                    .create_new(true)
-                                    .open(output.as_str())
-                                    .unwrap_or_else(
-                                        |e| {
-                                            error!("Failed to open \"{}\" {:?}", output, e);
-                                            std::process::exit(37);
-                                        } );
-
-    let mut f_in = OpenOptions::new().read(true)
-        .open(victim.as_str()).unwrap_or_else(|e| {
-        error!("Failed to open \"{}\" {:?}", victim, e);
-        std::process::exit(34);
-    } );
-    if let Err(_) = f_in.seek(SeekFrom::Start(start)) {
-        error!("Failed to seek to start");
-        std::process::exit(39);
-    }
-
-    const CHUNK : usize = 8192; // TODO args.flag_fragment_size;
-
-    let mut remaining = size;
-    loop {
-        let mut fragment : [u8;CHUNK] = [0;CHUNK];
-        if let Err(_) = f_in.read(&mut fragment[..]) {
-            error!("Failed to read in fragment");
-            std::process::exit(38);
-        }
-        if remaining < CHUNK as u64 {
-            if let Err(_) = f_out.write_all(&fragment[0..(remaining as usize)]) {
-                error!("Failed to write out fragment");
-                std::process::exit(7);
-            }
-            break;
-        } else {
-            if let Err(_) = f_out.write_all(&fragment[..]) {
-                error!("Failed to write out last fragment");
-                std::process::exit(7);
-            }
-            remaining -= CHUNK as u64;
+        match cut::cut_out_bytes(
+            args.arg_victimfile,
+            args.flag_output,
+            start,
+            size,
+            fragment_size,
+        ) {
+            Ok(_) => info!("Cutting succeeded."),
+            Err(_) => std::process::exit(77),
         }
     }
 
