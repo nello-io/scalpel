@@ -147,9 +147,7 @@ impl Signer {
 
 #[cfg(test)]
 mod test {
-    extern crate pem;
     use super::*;
-
     use concat::*;
 
     #[test]
