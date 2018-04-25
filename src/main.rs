@@ -9,9 +9,6 @@ extern crate docopt;
 extern crate ring;
 extern crate serde;
 
-extern crate base64;
-extern crate pem;
-
 #[macro_use]
 extern crate failure;
 

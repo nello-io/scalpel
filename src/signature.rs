@@ -8,7 +8,6 @@ use std::io::Read;
 use std::fs::OpenOptions;
 use errors::*;
 use failure::Fail;
-use pem::{parse_many, Pem};
 
 pub struct Signer {
     pub keypair: Option<signature::Ed25519KeyPair>,
