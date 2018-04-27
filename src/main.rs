@@ -15,7 +15,6 @@ extern crate failure;
 
 use docopt::Docopt;
 use std::path::Path;
-use common_failures::prelude::*;
 
 mod signature;
 use signature::*;
@@ -71,7 +70,7 @@ const NAME: &'static str = env!("CARGO_PKG_NAME");
 
 quick_main!(run);
 
-fn run() -> errors::Result<()> {
+fn run() -> Result<()> {
     env_logger::init();
 
     let args: Args = Docopt::new(USAGE)
@@ -89,7 +88,7 @@ fn run() -> errors::Result<()> {
         // command sign
 
         let path_victim = Path::new(&args.arg_victimfile);
-
+        // get keys from the specified input file
         let keys = if args.flag_format == String::from("pkcs8") {
             let key_path = Path::new(&args.arg_keyfile);
             Signer::read_pk8(&key_path)?
@@ -100,7 +99,7 @@ fn run() -> errors::Result<()> {
         } else {
             return Err( ScalpelError::ArgumentError.context("File Format not recognized").into() )
         };
-    
+        // get signature
         let signature = keys.calculate_signature(path_victim)?;
 
         // create signed file
@@ -108,7 +107,6 @@ fn run() -> errors::Result<()> {
 
         // test the verification
         let signed_filename = concat::derive_output_filename(path_victim)?;
-
         keys.verify_file(Path::new(&signed_filename))?;
 
         info!("singing succeeded.");

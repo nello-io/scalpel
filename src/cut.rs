@@ -10,6 +10,7 @@ pub fn cut_out_bytes(
     size: u64,
     fragment_size: usize,
 ) -> Result<()> {
+    
     const READ: bool = true;
     const WRITE: bool = false;
     let mut f_in = open_file(victim, READ)?;

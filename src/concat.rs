@@ -58,22 +58,6 @@ pub fn append_signature(path: &Path, sig: &signature::Signature) -> Result<()> {
     Ok(())
 }
 
-pub fn read_to_bytes(path: &Path) -> Result<Bytes> {
-    // open file
-    let mut victim = OpenOptions::new()
-        .read(true)
-        .open(path)
-        .map_err(|err| ScalpelError::ReadingError.context(err))?;
-
-    // read file to Bytes
-    let mut content: Vec<u8> = Vec::new();
-    victim
-        .read_to_end(&mut content)
-        .map_err(|err| ScalpelError::ReadingError.context(err))?;
-    // convert buf to Bytes
-    Ok(Bytes::from(content))
-}
-
 #[cfg(test)]
 mod test {
     extern crate rand;
@@ -116,28 +100,5 @@ mod test {
         assert_eq!(ref_sig[..], read_sig[..]);
     }
 
-    #[test]
-    fn test_read_to_bytes() {
-        // random content generation
-        let mut rng = rand::thread_rng();
-        let ref_bytes = iter::repeat(1)
-            .take(1000)
-            .map(|_| rng.gen_range(1, 255))
-            .collect::<Bytes>();
-        let path = Path::new("tmp/test_bytes");
-        {
-            // write content to file
-            let mut file = OpenOptions::new()
-                .write(true)
-                .truncate(true)
-                .create(true)
-                .open(&path)
-                .expect("Failed to open file");
-            file.write(&ref_bytes).expect("Failed to write bytes");
-        }
-
-        // read file and compare
-        let read_bytes = read_to_bytes(path).expect("Reading to bytes failed.");
-        assert_eq!(read_bytes, ref_bytes);
-    }
+    
 }
