@@ -16,24 +16,24 @@ pub fn cut_out_bytes(
     let mut f_out = open_file(output, WRITE)?;
 
     f_in.seek(SeekFrom::Start(start))
-        .map_err(|err| SigningError::SeekError.context(err))?;
+        .map_err(|err| ScalpelError::SeekError.context(err))?;
 
     let mut remaining = size;
     loop {
         let mut fragment = vec![0; fragment_size];
         f_in.read(&mut fragment[..])
-            .map_err(|err| SigningError::ReadingError.context(err))?;
+            .map_err(|err| ScalpelError::ReadingError.context(err))?;
 
         if remaining < fragment_size as u64 {
             f_out
                 .write_all(&fragment[0..(remaining as usize)])
-                .map_err(|err| SigningError::WritingError.context(err))?;
+                .map_err(|err| ScalpelError::WritingError.context(err))?;
 
             return Ok(());
         } else {
             f_out
                 .write_all(&fragment[..])
-                .map_err(|err| SigningError::WritingError.context(err))?;
+                .map_err(|err| ScalpelError::WritingError.context(err))?;
             remaining -= fragment_size as u64;
         }
     }
@@ -45,7 +45,7 @@ fn open_file(file: String, rw: bool) -> Result<File> {
         let f_in = OpenOptions::new()
             .read(true)
             .open(file.as_str())
-            .map_err(|err| SigningError::OpeningError.context(err))?;
+            .map_err(|err| ScalpelError::OpeningError.context(err))?;
 
         Ok(f_in)
     } else {
@@ -54,7 +54,7 @@ fn open_file(file: String, rw: bool) -> Result<File> {
             .truncate(true)
             .create(true)
             .open(file.as_str())
-            .map_err(|err| SigningError::OpeningError.context(err))?;
+            .map_err(|err| ScalpelError::OpeningError.context(err))?;
 
         Ok(f_out)
     }

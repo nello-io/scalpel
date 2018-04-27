@@ -10,7 +10,7 @@ use errors::*;
 pub fn derive_output_filename(path: &Path) -> Result<String> {
     // get file
     let filename = path.to_str()
-        .ok_or::<Error>(SigningError::PathError.into())?;
+        .ok_or::<Error>(ScalpelError::PathError.into())?;
 
     let file_split: Vec<&str> = filename.rsplitn(2, '.').collect();
 
@@ -31,29 +31,29 @@ pub fn append_signature(path: &Path, sig: &signature::Signature) -> Result<()> {
         .truncate(true)
         .create(true)
         .open(Path::new(&file_sig))
-        .map_err(|err| SigningError::OpeningError.context(err))?;
+        .map_err(|err| ScalpelError::OpeningError.context(err))?;
 
     // open input file
     let mut f_in = OpenOptions::new()
         .read(true)
         .open(path)
-        .map_err(|err| SigningError::OpeningError.context(err))?;
+        .map_err(|err| ScalpelError::OpeningError.context(err))?;
 
     // read input file to buffer
     let mut content: Vec<u8> = Vec::new();
     f_in.read_to_end(&mut content)
-        .map_err(|err| SigningError::OpeningError.context(err))?;
+        .map_err(|err| ScalpelError::OpeningError.context(err))?;
 
     // write input to new file, afterwards append signature
     f_out
         .write_all(&content)
-        .map_err(|err| SigningError::OpeningError.context(err))?;
+        .map_err(|err| ScalpelError::OpeningError.context(err))?;
 
     let byte_sig = Bytes::from(sig.as_ref());
 
     f_out
         .write_all(&byte_sig)
-        .map_err(|err| SigningError::OpeningError.context(err))?;
+        .map_err(|err| ScalpelError::OpeningError.context(err))?;
 
     Ok(())
 }
@@ -63,13 +63,13 @@ pub fn read_to_bytes(path: &Path) -> Result<Bytes> {
     let mut victim = OpenOptions::new()
         .read(true)
         .open(path)
-        .map_err(|err| SigningError::ReadingError.context(err))?;
+        .map_err(|err| ScalpelError::ReadingError.context(err))?;
 
     // read file to Bytes
     let mut content: Vec<u8> = Vec::new();
     victim
         .read_to_end(&mut content)
-        .map_err(|err| SigningError::ReadingError.context(err))?;
+        .map_err(|err| ScalpelError::ReadingError.context(err))?;
     // convert buf to Bytes
     Ok(Bytes::from(content))
 }

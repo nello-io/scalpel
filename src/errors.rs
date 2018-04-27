@@ -5,7 +5,7 @@ use std;
 pub type Result<X> = std::result::Result<X, Error>;
 
 #[derive(Debug, Fail)]
-pub enum SigningError {
+pub enum ScalpelError {
     #[fail(display = "Failed to open.")]
     OpeningError,
 
@@ -29,4 +29,7 @@ pub enum SigningError {
 
     #[fail(display = "Content of file is not as expected")]
     ContentError,
+
+    #[fail(display = "Wrong usage of arguments")]
+    ArgumentError,
 }

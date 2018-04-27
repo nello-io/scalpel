@@ -45,11 +45,11 @@ impl Signer {
             .write(true)
             .read(true)
             .open(path)
-            .map_err(|err| SigningError::OpeningError.context(err))?;
+            .map_err(|err| ScalpelError::OpeningError.context(err))?;
 
         let mut content = Vec::<u8>::new();
         file.read_to_end(&mut content)
-            .map_err(|err| SigningError::ReadingError.context(err))?;
+            .map_err(|err| ScalpelError::ReadingError.context(err))?;
 
         let content = Bytes::from(content);
         let signature = self.calculate_signature_from_bytes(&content)?;
@@ -65,7 +65,7 @@ impl Signer {
         if let Some(ref keypair) = self.keypair {
             Ok(keypair.sign(&file))
         } else {
-            Err(SigningError::KeyInitError
+            Err(ScalpelError::KeyInitError
                 .context("No key in here yet")
                 .into())
         }
@@ -89,7 +89,7 @@ impl Signer {
             )?;
             Ok(())
         } else {
-            Err(SigningError::KeyInitError
+            Err(ScalpelError::KeyInitError
                 .context("No key in here yet")
                 .into())
         }
@@ -106,18 +106,18 @@ impl Signer {
             .write(true)
             .read(true)
             .open(path)
-            .map_err(|err| SigningError::OpeningError.context(err))?;
+            .map_err(|err| ScalpelError::OpeningError.context(err))?;
 
         let mut content = Vec::<u8>::new();
         file.read_to_end(&mut content)
-            .map_err(|err| SigningError::ReadingError.context(err))?;
+            .map_err(|err| ScalpelError::ReadingError.context(err))?;
 
         if content.len() > 64 {
             let (data, signature) = content.split_at(content.len() - 64);
             self.verify_bytes(data, signature)?;
             Ok(())
         } else {
-            Err(SigningError::ContentError
+            Err(ScalpelError::ContentError
                 .context("File to short, no signature included")
                 .into())
         }
@@ -129,15 +129,15 @@ impl Signer {
         let mut file = OpenOptions::new()
             .read(true)
             .open(path_file)
-            .map_err(|err| SigningError::OpeningError.context(err))?;
+            .map_err(|err| ScalpelError::OpeningError.context(err))?;
 
         let mut content = Vec::new();
         file.read_to_end(&mut content)
-            .map_err(|err| SigningError::ReadingError.context(err))?;
+            .map_err(|err| ScalpelError::ReadingError.context(err))?;
 
         // get keypair
         let pkcs8_keys = signature::Ed25519KeyPair::from_pkcs8(untrusted::Input::from(&content))
-            .map_err(|err| SigningError::ParsePk8Error.context(err))?;
+            .map_err(|err| ScalpelError::ParsePk8Error.context(err))?;
         // return
         Ok(Signer {
             keypair: Some(pkcs8_keys),
