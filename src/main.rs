@@ -45,7 +45,7 @@ Options:
   --end=<end>      The end byte offset which will not be included.
   --size=<size>    Alternate way to sepcify the <end> combined with start.
   --fragment=<fragment>  Define the size of the fragment/chunk to read/write at once.
-  --format=<format>   specify the key format, eihter pkcs8, pem or bytes
+  --format=<format>   specify the key format, eihter pkcs8, pem, bytes or new
 ";
 
 #[derive(Debug, Deserialize)]
@@ -96,6 +96,8 @@ fn run() -> Result<()> {
             unimplemented!();
         } else if args.flag_format == String::from("bytes") {
             unimplemented!();
+        } else if args.flag_format == String::from("new") {
+            Signer::new()
         } else {
             return Err( ScalpelError::ArgumentError.context("File Format not recognized").into() )
         };
