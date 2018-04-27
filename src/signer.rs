@@ -14,12 +14,6 @@ pub struct Signer {
 }
 
 impl Signer {
-    pub fn new() -> Self {
-        Self {
-            keypair: Signer::generate_ed25519_keypair(),
-        }
-    }
-
     /// generate a ed25519 keypair in pkcs8 format
     fn generate_ed25519_keypair() -> Option<signature::Ed25519KeyPair> {
         let rng = rand::SystemRandom::new();
@@ -34,8 +28,57 @@ impl Signer {
         }
     }
 
+    pub fn random() -> Self {
+        Self {
+            keypair: Signer::generate_ed25519_keypair(),
+        }
+    }
+
+    /// Create signer based on in memory pkcs8 key
+    /// 
+    /// Expects raw bytes without encoding
+    pub fn from_pkcs8(pkcs8: &Vec<u8>) -> Result<Signer> {
+        // get keypair
+        let pkcs8_keys = signature::Ed25519KeyPair::from_pkcs8(untrusted::Input::from(&pkcs8))
+            .map_err(|err| ScalpelError::ParsePk8Error.context(err))?;
+        // return
+        Ok(Signer {
+            keypair: Some(pkcs8_keys),
+        })
+    }
+
+    /// create signer with key from pkcs8 file
+    /// 
+    /// Expects raw bytes without encoding
+    pub fn from_pkcs8_file(pkcs8_file_path: &Path) -> Result<Signer> {
+        // open file
+        let mut pkcs8_file = OpenOptions::new()
+            .read(true)
+            .open(pkcs8_file_path)
+            .map_err(|err| ScalpelError::OpeningError.context(err))?;
+
+        let mut content = Vec::new();
+        pkcs8_file.read_to_end(&mut content)
+            .map_err(|err| ScalpelError::ReadingError.context(err))?;
+        Self::from_pkcs8(&content)
+    }
+
+    /// get signature for bytes
+    pub fn calculate_signature(
+        &self,
+        file: &Bytes,
+    ) -> Result<ring::signature::Signature> {
+        if let Some(ref keypair) = self.keypair {
+            Ok(keypair.sign(&file))
+        } else {
+            Err(ScalpelError::KeyInitError
+                .context("No key in here yet")
+                .into())
+        }
+    }
+
     /// get signature of file
-    pub fn calculate_signature<P>(&self, path: P) -> Result<ring::signature::Signature>
+    pub fn calculate_signature_of_file<P>(&self, path: P) -> Result<ring::signature::Signature>
     where
         P: AsRef<Path>,
     {
@@ -52,27 +95,14 @@ impl Signer {
             .map_err(|err| ScalpelError::ReadingError.context(err))?;
 
         let content = Bytes::from(content);
-        let signature = self.calculate_signature_from_bytes(&content)?;
+        let signature = self.calculate_signature(&content)?;
 
         Ok(signature)
     }
 
-    /// get signature for bytes
-    pub fn calculate_signature_from_bytes(
-        &self,
-        file: &Bytes,
-    ) -> Result<ring::signature::Signature> {
-        if let Some(ref keypair) = self.keypair {
-            Ok(keypair.sign(&file))
-        } else {
-            Err(ScalpelError::KeyInitError
-                .context("No key in here yet")
-                .into())
-        }
-    }
 
     /// verify bytes with provided signature bytes
-    pub fn verify_bytes<B, C>(&self, bytes_data: B, bytes_signature: C) -> Result<()>
+    pub fn verify<B, C>(&self, bytes_data: B, bytes_signature: C) -> Result<()>
     where
         B: Into<Bytes>,
         C: Into<Bytes>,
@@ -114,34 +144,13 @@ impl Signer {
 
         if content.len() > 64 {
             let (data, signature) = content.split_at(content.len() - 64);
-            self.verify_bytes(data, signature)?;
+            self.verify(data, signature)?;
             Ok(())
         } else {
             Err(ScalpelError::ContentError
                 .context("File to short, no signature included")
                 .into())
         }
-    }
-
-    /// read key from pkcs8 file (raw bytes, no encoding) and return a Signature
-    pub fn read_pk8(path_file: &Path) -> Result<Signer> {
-        // open file
-        let mut file = OpenOptions::new()
-            .read(true)
-            .open(path_file)
-            .map_err(|err| ScalpelError::OpeningError.context(err))?;
-
-        let mut content = Vec::new();
-        file.read_to_end(&mut content)
-            .map_err(|err| ScalpelError::ReadingError.context(err))?;
-
-        // get keypair
-        let pkcs8_keys = signature::Ed25519KeyPair::from_pkcs8(untrusted::Input::from(&content))
-            .map_err(|err| ScalpelError::ParsePk8Error.context(err))?;
-        // return
-        Ok(Signer {
-            keypair: Some(pkcs8_keys),
-        })
     }
 }
 
@@ -153,11 +162,11 @@ mod test {
     #[test]
     fn test_keys_pk8() {
         let signer =
-            Signer::read_pk8(Path::new("./tmp/ed25519_keypair.pk8"))
+            Signer::from_pkcs8_file(Path::new("./tmp/ed25519_keypair.pk8"))
                 .expect("Failed to read pk8 keys from file");
 
         let signature = signer
-            .calculate_signature("./tmp/signme.bin")
+            .calculate_signature_of_file("./tmp/signme.bin")
             .expect("Signing failed");
 
         append_signature(Path::new("./tmp/signme.bin"), &signature)

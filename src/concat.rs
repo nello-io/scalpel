@@ -64,12 +64,12 @@ mod test {
     use super::*;
     use self::rand::Rng;
     use std::iter;
-    use signature::*;
+    use signer::*;
     use std::io::{Seek, SeekFrom};
 
     #[test]
     fn test_append_signature() {
-        let sig = Signer::new();
+        let signer = Signer::random();
 
         //random content generation
         let mut rng = rand::thread_rng();
@@ -77,7 +77,7 @@ mod test {
             .take(1000)
             .map(|_| rng.gen_range(1, 255))
             .collect::<Bytes>();
-        let signature = sig.calculate_signature_from_bytes(&byte_victim)
+        let signature = signer.calculate_signature(&byte_victim)
             .expect("Failed signature from bytes");
         let path_victim = Path::new("tmp/test_bytes");
         append_signature(&path_victim, &signature).expect("Appending signature failed.");
