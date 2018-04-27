@@ -8,12 +8,14 @@ extern crate bytes;
 extern crate docopt;
 extern crate ring;
 extern crate serde;
-
+#[macro_use]
+extern crate common_failures;
 #[macro_use]
 extern crate failure;
 
 use docopt::Docopt;
 use std::path::Path;
+use common_failures::prelude::*;
 
 mod signature;
 use signature::*;
@@ -21,8 +23,8 @@ use signature::*;
 mod cut;
 mod concat;
 mod errors;
+use errors::*;
 
-// TODO use common_failures
 const USAGE: &'static str = "
 scalpel
 
@@ -66,7 +68,10 @@ struct Args {
 const VERSION: &'static str = env!("CARGO_PKG_VERSION");
 const NAME: &'static str = env!("CARGO_PKG_NAME");
 
-fn main() {
+
+quick_main!(run);
+
+fn run() -> errors::Result<()> {
     env_logger::init();
 
     let args: Args = Docopt::new(USAGE)
@@ -76,10 +81,10 @@ fn main() {
     // check arguments
     if args.flag_version {
         println!("{} {}", NAME, VERSION);
-        std::process::exit(0);
+        return Ok(())
     } else if args.flag_help {
         println!("{}", USAGE);
-        std::process::exit(0);
+        return Ok(())
     } else if args.cmd_sign {
         // command sign
 
@@ -87,44 +92,27 @@ fn main() {
 
         let keys = if args.flag_format == String::from("pkcs8") {
             let key_path = Path::new(&args.arg_keyfile);
-            Signer::read_pk8(&key_path).unwrap_or_else( |e|
-                {   error!("{}", e);
-                    std::process::exit(77);
-                }
-            )
+            Signer::read_pk8(&key_path)?
         } else if args.flag_format == String::from("pem") {
             unimplemented!();
         } else if args.flag_format == String::from("bytes") {
             unimplemented!();
         } else {
-            println!("File format for key not recognized, use one of the specified formats");
-            std::process::exit(1);
+            return Err( ScalpelError::ArgumentError.context("File Format not recognized").into() )
         };
     
-        let signature = keys.calculate_signature(path_victim).unwrap_or_else(|err| {
-            error!("{}", err);
-            std::process::exit(77);
-        });
+        let signature = keys.calculate_signature(path_victim)?;
 
         // create signed file
-        if let Err(e) = concat::append_signature(&path_victim, &signature) {
-            error!("Failed to sign: {:?}", e);
-            std::process::exit(77);
-        }
+        concat::append_signature(&path_victim, &signature)?;
 
         // test the verification
-        let signed_filename = concat::derive_output_filename(path_victim).unwrap_or_else(|err| {
-            error!("Failed to derive file name of signed file: {:?}", err);
-            std::process::exit(77);
-        });
-        keys.verify_file(Path::new(&signed_filename))
-            .unwrap_or_else(|err| {
-                error!("Failed to verify: {:?}", err);
-                std::process::exit(77);
-            });
+        let signed_filename = concat::derive_output_filename(path_victim)?;
+
+        keys.verify_file(Path::new(&signed_filename))?;
 
         info!("singing succeeded.");
-        std::process::exit(0);
+        return Ok(())
     } else if args.cmd_cut {
         // command cut
 
@@ -132,22 +120,18 @@ fn main() {
         let start = args.flag_start.unwrap_or(0) as u64; // if none, set to 0
         let size: u64 = if let Some(end) = args.flag_end {
             if let Some(_) = args.flag_size {
-                error!("Either end or size has to be specified, not both");
-                std::process::exit(31);
+                return Err( ScalpelError::ArgumentError
+                    .context("Either end or size has to be specified, not both").into());
             }
             if start >= end {
-                error!(
-                    "end addr {1} should be larger than start addr {0}",
-                    start, end
-                );
-                std::process::exit(34);
+                return Err( ScalpelError::ArgumentError
+                    .context(format!("end addr {1} should be larger than start addr {0}", start, end)).into());
             }
             end - start
         } else if let Some(size) = args.flag_size {
             size
         } else {
-            error!("either end addr or size has to be specified");
-            std::process::exit(36);
+            return Err( ScalpelError::ArgumentError.context("Either end addr or size has to be specified").into());
         };
         let fragment_size = args.flag_fragment.unwrap_or(8192) as usize; // CHUNK from cut
 
@@ -159,11 +143,11 @@ fn main() {
             fragment_size,
         ) {
             Ok(_) => info!("Cutting succeeded."),
-            Err(_) => std::process::exit(77),
+            Err(e) => return Err(e),
         }
     }
 
     info!("scalpel operation complete");
 
-    std::process::exit(0);
+    return Ok(())
 }
