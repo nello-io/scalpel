@@ -1,3 +1,9 @@
 
 /target/
 **/*.rs.bk
+/.vscode/
+
+# tmp files from tests
+tmp/*signed*
+tmp/test_bytes
+tmp/test_cut*
