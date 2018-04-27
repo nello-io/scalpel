@@ -34,10 +34,16 @@ scalpel --start 282624 --size 241664 --output winc_part_B.bin xdk-asf-3.36.2/com
 
 - Use `xxd -i sliced.bin > sliced_binary.hpp` to create a header file out of the result.
 
-- Convert RSA keys in .pem format to pkcs8 format via openssl (see `ring` doc [doc.rs](https://docs.rs/ring/0.13.0-alpha/ring/signature/struct.RSAKeyPair.html) )
+- Convert RSA keys in .pem format to pkcs8 format via openssl (see `ring` doc [doc.rs](https://docs.rs/ring/0.13.0-alpha/ring/signature/struct.RSAKeyPair.html) ), `openssl` supports Ed25519 algorithm currently only on `master` branch
 
-```openssl pkcs8 -toppk8 -nocrypt -outform der -in [key.pem] > [pkcs8_key.pk8]```
-- `openssl` supports Ed25519 algorithm currently only on `master` branch
+    ```
+    openssl pkcs8 -toppk8 -nocrypt -outform der -in [key.pem] > [pkcs8_key.pk8]```
+
+- Generate valid Ed25519 Keypair use small tool from `ring` author:
+    ```
+    cargo install kt
+    kt generate ed25519 --out=FILE
+    ```
 
 
 
