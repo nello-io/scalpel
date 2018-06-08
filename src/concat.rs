@@ -42,18 +42,18 @@ pub fn append_signature(path: &Path, sig: &signature::Signature) -> Result<()> {
     // read input file to buffer
     let mut content: Vec<u8> = Vec::new();
     f_in.read_to_end(&mut content)
-        .map_err(|err| ScalpelError::OpeningError.context(err))?;
+        .map_err(|err| ScalpelError::ReadingError.context(err))?;
 
     // write input to new file, afterwards append signature
     f_out
         .write_all(&content)
-        .map_err(|err| ScalpelError::OpeningError.context(err))?;
+        .map_err(|err| ScalpelError::WritingError.context(err))?;
 
     let byte_sig = Bytes::from(sig.as_ref());
 
     f_out
         .write_all(&byte_sig)
-        .map_err(|err| ScalpelError::OpeningError.context(err))?;
+        .map_err(|err| ScalpelError::WritingError.context(err))?;
 
     Ok(())
 }
