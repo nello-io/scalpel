@@ -19,8 +19,8 @@ use std::path::Path;
 mod signer;
 use signer::*;
 
-mod cut;
 mod concat;
+mod cut;
 mod errors;
 use errors::*;
 
@@ -30,13 +30,14 @@ scalpel
 Usage:
   scalpel cut [--fragment=<fragment>] [--start=<start>] --end=<end> --output=<output> <victimfile>
   scalpel cut [--fragment=<fragment>] [--start=<start>] --size=<size> --output=<output> <victimfile>
-  scalpel sign <victimfile> <keyfile> [--format=<format>]
+  scalpel sign <keyfile> [--output=<output>] <file>
+  scalpel sign <keyfile> <files..>
   scalpel (-h | --help)
   scalpel (-v |--version)
 
 Commands:
   cut   extract bytes from a binary file
-  sign  sign binary with ED25519 Key Pair
+  sign  sign binary with a keypair such as ED25519 or RSA
 
 Options:
   -h --help     Show this screen.
@@ -56,9 +57,11 @@ struct Args {
     flag_end: Option<u64>,
     flag_size: Option<u64>,
     flag_fragment: Option<usize>,
-    flag_output: String,
-    arg_victimfile: String,
+    flag_output: Option<String>,
+    arg_input: String,
     arg_keyfile: String,
+    arg_file: String,
+    arg_files: Vec<String>,
     flag_format: Option<String>,
     flag_version: bool,
     flag_help: bool,
@@ -84,7 +87,7 @@ fn run() -> Result<()> {
     } else if args.cmd_sign {
         // command sign
 
-        let path_victim = Path::new(&args.arg_victimfile);
+        let path_victim = Path::new(&args.arg_input);
         // get keys from the specified input file
         let key_format = args.flag_format.unwrap_or("pkcs8".to_string());
         let signer = match key_format.as_str() {
@@ -93,18 +96,13 @@ fn run() -> Result<()> {
                 Signer::from_pkcs8_file(&key_path)?
             }
             "pem" => {
-                unimplemented!();
-            }
-            "raw" => {
-                unimplemented!();
+                unimplemented!("can you suggest a parser?");
             }
             "generate" => Signer::random(),
             fmt => {
-                return Err(
-                    ScalpelError::ArgumentError
-                        .context(format!("File Format not recognized {}", fmt))
-                        .into(),
-                )
+                return Err(ScalpelError::ArgumentError
+                    .context(format!("File Format not recognized {}", fmt))
+                    .into())
             }
         };
         // get signature
@@ -113,12 +111,20 @@ fn run() -> Result<()> {
         // create signed file
         concat::append_signature(&path_victim, &signature)?;
 
-        // test the verification
-        let signed_filename = concat::derive_output_filename(path_victim)?;
-        signer.verify_file(Path::new(&signed_filename))?;
+        if args.arg_files.len() > 0 {
+            for item in args.arg_files.iter() {
+                signer.verify_file(Path::new(item))?;
+            }
+        } else {
+            // test the verification
+            let signed_filename = args
+                .flag_output
+                .unwrap_or(concat::derive_output_filename(path_victim)?);
 
-        info!("signing success: \"{}\"", signed_filename.as_str());
+            signer.verify_file(Path::new(&signed_filename))?;
 
+            info!("signing success: \"{}\"", signed_filename.as_str());
+        }
         Ok(())
     } else if args.cmd_cut {
         // command cut
@@ -127,38 +133,31 @@ fn run() -> Result<()> {
         let start = args.flag_start.unwrap_or(0) as u64; // if none, set to 0
         let size: u64 = if let Some(end) = args.flag_end {
             if let Some(_) = args.flag_size {
-                return Err(
-                    ScalpelError::ArgumentError
-                        .context("Either end or size has to be specified, not both")
-                        .into(),
-                );
+                return Err(ScalpelError::ArgumentError
+                    .context("Either end or size has to be specified, not both")
+                    .into());
             }
             if start >= end {
-                return Err(
-                    ScalpelError::ArgumentError
-                        .context(format!(
-                            "end addr {1} should be larger than start addr {0}",
-                            start,
-                            end
-                        ))
-                        .into(),
-                );
+                return Err(ScalpelError::ArgumentError
+                    .context(format!(
+                        "end addr {1} should be larger than start addr {0}",
+                        start, end
+                    ))
+                    .into());
             }
             end - start
         } else if let Some(size) = args.flag_size {
             size
         } else {
-            return Err(
-                ScalpelError::ArgumentError
-                    .context("Either end addr or size has to be specified")
-                    .into(),
-            );
+            return Err(ScalpelError::ArgumentError
+                .context("Either end addr or size has to be specified")
+                .into());
         };
         let fragment_size = args.flag_fragment.unwrap_or(8192) as usize; // CHUNK from cut
 
         cut::cut_out_bytes(
-            args.arg_victimfile,
-            args.flag_output,
+            args.arg_input,
+            args.flag_output.unwrap(),
             start,
             size,
             fragment_size,
@@ -167,7 +166,9 @@ fn run() -> Result<()> {
             Ok(())
         })
     } else {
-        Err(ScalpelError::ArgumentError.context("No idea what you were thinking..").into())
+        Err(ScalpelError::ArgumentError
+            .context("No idea what you were thinking..")
+            .into())
     }
 }
 
