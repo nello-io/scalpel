@@ -1,4 +1,9 @@
 #[macro_use]
+extern crate lazy_static;
+extern crate regex;
+use regex::{Regex,Captures};
+
+#[macro_use]
 extern crate log;
 extern crate env_logger;
 extern crate untrusted;
@@ -19,12 +24,148 @@ use std::path::Path;
 mod signer;
 use signer::*;
 
-mod cut;
 mod concat;
+mod cut;
 mod errors;
-mod cmd_serialize;
 use errors::*;
-use cmd_serialize::serialize_cmd_opt;
+
+use std::fmt;
+
+#[derive(Debug)]
+enum Magnitude {
+    Unit,
+    K,
+    Ki,
+    M,
+    Mi,
+    G,
+    Gi,
+}
+
+impl Default for Magnitude {
+    fn default() -> Self {
+        Magnitude::Unit
+    }
+}
+
+impl Magnitude {
+    pub fn parse(mag_str: &str) -> Result<Self> {
+        match mag_str {
+            "" => Ok(Magnitude::Unit),
+            "K" => Ok(Magnitude::K),
+            "Ki" => Ok(Magnitude::Ki),
+            "M" => Ok(Magnitude::M),
+            "Mi" => Ok(Magnitude::Mi),
+            "G" => Ok(Magnitude::G),
+            "Gi" => Ok(Magnitude::Gi),
+            _ => {
+                debug!("No idea what to do with {} as magnitude ", mag_str);
+                Err(ScalpelError::ParsingError.into())
+            },
+        }
+    }
+
+    pub fn as_u64(&self) -> u64 {
+        match self {
+            Magnitude::Unit => 1u64,
+            Magnitude::K => 1000u64,
+            Magnitude::Ki => 1024u64,
+            Magnitude::M => 1000u64*1000u64,
+            Magnitude::Mi => 1024u64*1024u64,
+            Magnitude::G => 1000u64*1000u64*1000u64,
+            Magnitude::Gi => 1024u64*1024u64*1024u64,
+        }
+    }
+}
+
+
+// unused, untested
+//
+// impl<'de> serde::de::Deserialize<'de> for Magnitude {
+//     fn deserialize<D>(deserializer: D) -> ::std::result::Result<Self, D::Error>
+//     where
+//         D: serde::de::Deserializer<'de>,
+//     {
+//         struct MagnitudeVisitor;
+
+//         impl<'de> serde::de::Visitor<'de> for MagnitudeVisitor {
+//             type Value = Magnitude;
+
+//             fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+//                 formatter.write_str("Expected a magnitude")
+//             }
+
+//             fn visit_str<E>(self, value: &str) -> ::std::result::Result<Magnitude, E>
+//             where
+//                 E: serde::de::Error,
+//             {
+//                 Magnitude::parse(value).map_err(|_e| {
+//                     serde::de::Error::unknown_field(value, MAGNITUDES)
+//                 })
+//             }
+//         }
+//         const MAGNITUDES: &'static [&'static str] = &["", "K", "Ki", "G", "Gi", "M", "Mi"];
+//         deserializer.deserialize_enum("Magnitude", MAGNITUDES, MagnitudeVisitor)
+//     }
+// }
+
+#[derive(Debug, Default)]
+struct ByteOffset {
+    num: u64,
+    magnitude: Magnitude,
+}
+
+impl ByteOffset {
+    pub fn new(num: u64, magnitude: Magnitude) -> Self {
+        Self { num, magnitude }
+    }
+    pub fn as_u64(&self) -> u64 {
+        self.magnitude.as_u64() * self.num
+    }
+}
+
+impl<'de> serde::de::Deserialize<'de> for ByteOffset {
+    fn deserialize<D>(deserializer: D) -> ::std::result::Result<Self, D::Error>
+    where
+        D: serde::de::Deserializer<'de>,
+    {
+
+        struct ByteOffsetVisitor;
+
+        impl<'de> serde::de::Visitor<'de> for ByteOffsetVisitor {
+            type Value = ByteOffset;
+
+            fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+                formatter.write_str("Expected a ByteOffset")
+            }
+
+            fn visit_str<E>(self, value: &str) -> ::std::result::Result<ByteOffset, E>
+            where
+                E: serde::de::Error,
+            {
+                lazy_static!{
+                    static ref REGEX : Regex = Regex::new(r"^([0-9]+)((?:[KMGTE]i?)?)$").unwrap();
+                }
+                
+                let byte_offset = REGEX.captures(value).ok_or(Err::<Captures,ScalpelError>(ScalpelError::ParsingError.into()))
+                .and_then(|captures| {
+                    if captures.len() == 3 {
+                        let num_str = &captures[1];
+                        let magnitude_str = &captures[2];
+                        let num : u64 = num_str.parse::<u64>().map_err(|_e| Err::<u64,ScalpelError>(ScalpelError::ParsingError) ).expect("u64 parsing exploded");;
+                        let magnitude = Magnitude::parse(magnitude_str).expect("magnitude exploded");
+                        Ok(ByteOffset::new(num, magnitude))
+                    } else {
+                        Ok(Default::default())
+                    }
+                }).expect("Captures exploded");
+                Ok(byte_offset)
+            }
+
+        }
+        deserializer.deserialize_str(ByteOffsetVisitor)
+    }
+}
 
 const USAGE: &'static str = "
 scalpel
@@ -41,23 +182,23 @@ Commands:
   sign  sign binary with ED25519 Key Pair
 
 Options:
-  -h --help                 Show this screen.
-  -v --version              Show version.
-  --start=<start>           Start byte offset of the section to cut out. If omitted, set to 0. Use Ki=1014, Mi=1024^2, Gi=1024^3 and K=10^3, M=10^6, G=10^9 as suffix.
-  --end=<end>               The end byte offset which will not be included. Use Ki=1014, Mi=1024^2, Gi=1024^3 and K=10^3, M=10^6, G=10^9 as suffix.
-  --size=<size>             Alternate way to sepcify the <end> combined with start. Use Ki=1014, Mi=1024^2, Gi=1024^3 and K=10^3, M=10^6, G=10^9 as suffix.
-  --fragment=<fragment>     Define the size of the fragment/chunk to read/write at once. Use Ki=1014, Mi=1024^2, Gi=1024^3 and K=10^3, M=10^6, G=10^9 as suffix.
-  --format=<format>         specify the key format, eihter pkcs8, pem, bytes or new
+  -h --help     Show this screen.
+  -v --version     Show version.
+  --start=<start>  Start byte offset of the section to cut out. If omitted, set to 0.
+  --end=<end>      The end byte offset which will not be included.
+  --size=<size>    Alternate way to sepcify the <end> combined with start.
+  --fragment=<fragment>  Define the size of the fragment/chunk to read/write at once.
+  --format=<format>   specify the key format, eihter pkcs8, pem, bytes or new
 ";
 
 #[derive(Debug, Deserialize)]
 struct Args {
     cmd_cut: bool,
     cmd_sign: bool,
-    flag_start: Option<String>,
-    flag_end: Option<String>,
-    flag_size: Option<String>,
-    flag_fragment: Option<String>,
+    flag_start: Option<ByteOffset>,
+    flag_end: Option<ByteOffset>,
+    flag_size: Option<ByteOffset>,
+    flag_fragment: Option<usize>,
     flag_output: String,
     arg_victimfile: String,
     arg_keyfile: String,
@@ -65,7 +206,6 @@ struct Args {
     flag_version: bool,
     flag_help: bool,
 }
-
 
 const VERSION: &'static str = env!("CARGO_PKG_VERSION");
 const NAME: &'static str = env!("CARGO_PKG_NAME");
@@ -103,11 +243,9 @@ fn run() -> Result<()> {
             }
             "generate" => Signer::random(),
             fmt => {
-                return Err(
-                    ScalpelError::ArgumentError
-                        .context(format!("File Format not recognized {}", fmt))
-                        .into(),
-                )
+                return Err(ScalpelError::ArgumentError
+                    .context(format!("File Format not recognized {}", fmt))
+                    .into())
             }
         };
         // get signature
@@ -127,51 +265,47 @@ fn run() -> Result<()> {
         // command cut
 
         // do input handling
-        let start = serialize_cmd_opt(args.flag_start.unwrap_or("0".to_string()) )?; // if none, set to 0
+        let start = args.flag_start.unwrap_or(Default::default()).as_u64(); // if none, set to 0
         let size: u64 = if let Some(end) = args.flag_end {
-            let end = serialize_cmd_opt(end)?;
             if let Some(_) = args.flag_size {
-                return Err(
-                    ScalpelError::ArgumentError
-                        .context("Either end or size has to be specified, not both")
-                        .into(),
-                );
+                return Err(ScalpelError::ArgumentError
+                    .context("Either end or size has to be specified, not both")
+                    .into());
             }
+            let end = end.as_u64();
             if start >= end {
-                return Err(
-                    ScalpelError::ArgumentError
-                        .context(format!(
-                            "end addr {1} should be larger than start addr {0}",
-                            start,
-                            end
-                        ))
-                        .into(),
-                );
+                return Err(ScalpelError::ArgumentError
+                    .context(format!(
+                        "end addr {1} should be larger than start addr {0}",
+                        start, end
+                    ))
+                    .into());
             }
             end - start
         } else if let Some(size) = args.flag_size {
-            serialize_cmd_opt(size)?
+            let size = size.as_u64();
+            size
         } else {
-            return Err(
-                ScalpelError::ArgumentError
-                    .context("Either end addr or size has to be specified")
-                    .into(),
-            );
+            return Err(ScalpelError::ArgumentError
+                .context("Either end addr or size has to be specified")
+                .into());
         };
-        let fragment_size = serialize_cmd_opt(args.flag_fragment.unwrap_or("8192".to_string()))?; // CHUNK from cut
+        let fragment_size = args.flag_fragment.unwrap_or(8192) as usize; // CHUNK from cut
 
         cut::cut_out_bytes(
             args.arg_victimfile,
             args.flag_output,
             start,
             size,
-            fragment_size as usize,
+            fragment_size,
         ).and_then(|_| {
             info!("Cutting success");
             Ok(())
         })
     } else {
-        Err(ScalpelError::ArgumentError.context("No idea what you were thinking..").into())
+        Err(ScalpelError::ArgumentError
+            .context("No idea what you were thinking..")
+            .into())
     }
 }
 
