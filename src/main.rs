@@ -22,7 +22,9 @@ use signer::*;
 mod cut;
 mod concat;
 mod errors;
+mod cmd_serialize;
 use errors::*;
+use cmd_serialize::serialize_cmd_opt;
 
 const USAGE: &'static str = "
 scalpel
@@ -39,23 +41,23 @@ Commands:
   sign  sign binary with ED25519 Key Pair
 
 Options:
-  -h --help     Show this screen.
-  -v --version     Show version.
-  --start=<start>  Start byte offset of the section to cut out. If omitted, set to 0.
-  --end=<end>      The end byte offset which will not be included.
-  --size=<size>    Alternate way to sepcify the <end> combined with start.
-  --fragment=<fragment>  Define the size of the fragment/chunk to read/write at once.
-  --format=<format>   specify the key format, eihter pkcs8, pem, bytes or new
+  -h --help                 Show this screen.
+  -v --version              Show version.
+  --start=<start>           Start byte offset of the section to cut out. If omitted, set to 0. Use Ki=1014, Mi=1024^2, Gi=1024^3 and K=10^3, M=10^6, G=10^9 as suffix.
+  --end=<end>               The end byte offset which will not be included. Use Ki=1014, Mi=1024^2, Gi=1024^3 and K=10^3, M=10^6, G=10^9 as suffix.
+  --size=<size>             Alternate way to sepcify the <end> combined with start. Use Ki=1014, Mi=1024^2, Gi=1024^3 and K=10^3, M=10^6, G=10^9 as suffix.
+  --fragment=<fragment>     Define the size of the fragment/chunk to read/write at once. Use Ki=1014, Mi=1024^2, Gi=1024^3 and K=10^3, M=10^6, G=10^9 as suffix.
+  --format=<format>         specify the key format, eihter pkcs8, pem, bytes or new
 ";
 
 #[derive(Debug, Deserialize)]
 struct Args {
     cmd_cut: bool,
     cmd_sign: bool,
-    flag_start: Option<u64>,
-    flag_end: Option<u64>,
-    flag_size: Option<u64>,
-    flag_fragment: Option<usize>,
+    flag_start: Option<String>,
+    flag_end: Option<String>,
+    flag_size: Option<String>,
+    flag_fragment: Option<String>,
     flag_output: String,
     arg_victimfile: String,
     arg_keyfile: String,
@@ -63,6 +65,7 @@ struct Args {
     flag_version: bool,
     flag_help: bool,
 }
+
 
 const VERSION: &'static str = env!("CARGO_PKG_VERSION");
 const NAME: &'static str = env!("CARGO_PKG_NAME");
@@ -124,8 +127,9 @@ fn run() -> Result<()> {
         // command cut
 
         // do input handling
-        let start = args.flag_start.unwrap_or(0) as u64; // if none, set to 0
+        let start = serialize_cmd_opt(args.flag_start.unwrap_or("0".to_string()) )?; // if none, set to 0
         let size: u64 = if let Some(end) = args.flag_end {
+            let end = serialize_cmd_opt(end)?;
             if let Some(_) = args.flag_size {
                 return Err(
                     ScalpelError::ArgumentError
@@ -146,7 +150,7 @@ fn run() -> Result<()> {
             }
             end - start
         } else if let Some(size) = args.flag_size {
-            size
+            serialize_cmd_opt(size)?
         } else {
             return Err(
                 ScalpelError::ArgumentError
@@ -154,14 +158,14 @@ fn run() -> Result<()> {
                     .into(),
             );
         };
-        let fragment_size = args.flag_fragment.unwrap_or(8192) as usize; // CHUNK from cut
+        let fragment_size = serialize_cmd_opt(args.flag_fragment.unwrap_or("8192".to_string()))?; // CHUNK from cut
 
         cut::cut_out_bytes(
             args.arg_victimfile,
             args.flag_output,
             start,
             size,
-            fragment_size,
+            fragment_size as usize,
         ).and_then(|_| {
             info!("Cutting success");
             Ok(())
