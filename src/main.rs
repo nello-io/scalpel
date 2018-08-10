@@ -1,4 +1,9 @@
 #[macro_use]
+extern crate lazy_static;
+extern crate regex;
+use regex::{Regex,Captures};
+
+#[macro_use]
 extern crate log;
 extern crate env_logger;
 extern crate untrusted;
@@ -19,10 +24,12 @@ use std::path::Path;
 mod signer;
 use signer::*;
 
-mod cut;
 mod concat;
+mod cut;
 mod errors;
+mod byte_offset;
 use errors::*;
+use byte_offset::*;
 
 const USAGE: &'static str = "
 scalpel
@@ -52,9 +59,9 @@ Options:
 struct Args {
     cmd_cut: bool,
     cmd_sign: bool,
-    flag_start: Option<u64>,
-    flag_end: Option<u64>,
-    flag_size: Option<u64>,
+    flag_start: Option<ByteOffset>,
+    flag_end: Option<ByteOffset>,
+    flag_size: Option<ByteOffset>,
     flag_fragment: Option<usize>,
     flag_output: String,
     arg_victimfile: String,
@@ -100,11 +107,9 @@ fn run() -> Result<()> {
             }
             "generate" => Signer::random(),
             fmt => {
-                return Err(
-                    ScalpelError::ArgumentError
-                        .context(format!("File Format not recognized {}", fmt))
-                        .into(),
-                )
+                return Err(ScalpelError::ArgumentError
+                    .context(format!("File Format not recognized {}", fmt))
+                    .into())
             }
         };
         // get signature
@@ -124,35 +129,30 @@ fn run() -> Result<()> {
         // command cut
 
         // do input handling
-        let start = args.flag_start.unwrap_or(0) as u64; // if none, set to 0
+        let start = args.flag_start.unwrap_or(Default::default()).as_u64(); // if none, set to 0
         let size: u64 = if let Some(end) = args.flag_end {
             if let Some(_) = args.flag_size {
-                return Err(
-                    ScalpelError::ArgumentError
-                        .context("Either end or size has to be specified, not both")
-                        .into(),
-                );
+                return Err(ScalpelError::ArgumentError
+                    .context("Either end or size has to be specified, not both")
+                    .into());
             }
+            let end = end.as_u64();
             if start >= end {
-                return Err(
-                    ScalpelError::ArgumentError
-                        .context(format!(
-                            "end addr {1} should be larger than start addr {0}",
-                            start,
-                            end
-                        ))
-                        .into(),
-                );
+                return Err(ScalpelError::ArgumentError
+                    .context(format!(
+                        "end addr {1} should be larger than start addr {0}",
+                        start, end
+                    ))
+                    .into());
             }
             end - start
         } else if let Some(size) = args.flag_size {
+            let size = size.as_u64();
             size
         } else {
-            return Err(
-                ScalpelError::ArgumentError
-                    .context("Either end addr or size has to be specified")
-                    .into(),
-            );
+            return Err(ScalpelError::ArgumentError
+                .context("Either end addr or size has to be specified")
+                .into());
         };
         let fragment_size = args.flag_fragment.unwrap_or(8192) as usize; // CHUNK from cut
 
@@ -167,7 +167,9 @@ fn run() -> Result<()> {
             Ok(())
         })
     } else {
-        Err(ScalpelError::ArgumentError.context("No idea what you were thinking..").into())
+        Err(ScalpelError::ArgumentError
+            .context("No idea what you were thinking..")
+            .into())
     }
 }
 
