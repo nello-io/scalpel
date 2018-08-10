@@ -37,13 +37,14 @@ scalpel
 Usage:
   scalpel cut [--fragment=<fragment>] [--start=<start>] --end=<end> --output=<output> <victimfile>
   scalpel cut [--fragment=<fragment>] [--start=<start>] --size=<size> --output=<output> <victimfile>
-  scalpel sign <victimfile> <keyfile> [--format=<format>]
+  scalpel sign <keyfile> [--output=<output>] <file>
+  scalpel sign <keyfile> <files..>
   scalpel (-h | --help)
   scalpel (-v |--version)
 
 Commands:
   cut   extract bytes from a binary file
-  sign  sign binary with ED25519 Key Pair
+  sign  sign binary with a keypair such as ED25519 or RSA
 
 Options:
   -h --help     Show this screen.
@@ -63,9 +64,11 @@ struct Args {
     flag_end: Option<ByteOffset>,
     flag_size: Option<ByteOffset>,
     flag_fragment: Option<usize>,
-    flag_output: String,
-    arg_victimfile: String,
+    flag_output: Option<String>,
+    arg_input: String,
     arg_keyfile: String,
+    arg_file: String,
+    arg_files: Vec<String>,
     flag_format: Option<String>,
     flag_version: bool,
     flag_help: bool,
@@ -91,7 +94,7 @@ fn run() -> Result<()> {
     } else if args.cmd_sign {
         // command sign
 
-        let path_victim = Path::new(&args.arg_victimfile);
+        let path_victim = Path::new(&args.arg_input);
         // get keys from the specified input file
         let key_format = args.flag_format.unwrap_or("pkcs8".to_string());
         let signer = match key_format.as_str() {
@@ -100,10 +103,7 @@ fn run() -> Result<()> {
                 Signer::from_pkcs8_file(&key_path)?
             }
             "pem" => {
-                unimplemented!();
-            }
-            "raw" => {
-                unimplemented!();
+                unimplemented!("can you suggest a parser?");
             }
             "generate" => Signer::random(),
             fmt => {
@@ -118,12 +118,20 @@ fn run() -> Result<()> {
         // create signed file
         concat::append_signature(&path_victim, &signature)?;
 
-        // test the verification
-        let signed_filename = concat::derive_output_filename(path_victim)?;
-        signer.verify_file(Path::new(&signed_filename))?;
+        if args.arg_files.len() > 0 {
+            for item in args.arg_files.iter() {
+                signer.verify_file(Path::new(item))?;
+            }
+        } else {
+            // test the verification
+            let signed_filename = args
+                .flag_output
+                .unwrap_or(concat::derive_output_filename(path_victim)?);
 
-        info!("signing success: \"{}\"", signed_filename.as_str());
+            signer.verify_file(Path::new(&signed_filename))?;
 
+            info!("signing success: \"{}\"", signed_filename.as_str());
+        }
         Ok(())
     } else if args.cmd_cut {
         // command cut
@@ -157,8 +165,8 @@ fn run() -> Result<()> {
         let fragment_size = args.flag_fragment.unwrap_or(8192) as usize; // CHUNK from cut
 
         cut::cut_out_bytes(
-            args.arg_victimfile,
-            args.flag_output,
+            args.arg_input,
+            args.flag_output.unwrap(),
             start,
             size,
             fragment_size,
