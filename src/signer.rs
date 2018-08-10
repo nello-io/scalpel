@@ -1,6 +1,7 @@
 use bytes::Bytes;
 use untrusted;
 
+use std::fmt::Debug;
 use ring;
 use ring::{rand, signature};
 use std::path::Path;
@@ -77,10 +78,11 @@ impl Signer {
         }
     }
 
+
     /// get signature of file
     pub fn calculate_signature_of_file<P>(&self, path: P) -> Result<ring::signature::Signature>
     where
-        P: AsRef<Path>,
+        P: AsRef<Path> + Debug,
     {
         let path: &Path = path.as_ref();
 
@@ -88,7 +90,7 @@ impl Signer {
             .write(true)
             .read(true)
             .open(path)
-            .map_err(|err| ScalpelError::OpeningError.context(err))?;
+            .map_err(|err| ScalpelError::OpeningError.context(err).context(format!("Failed to open {:?}", path )))?;
 
         let mut content = Vec::<u8>::new();
         file.read_to_end(&mut content)

@@ -11,10 +11,17 @@ pub fn cut_out_bytes(
     fragment_size: usize,
 ) -> Result<()> {
     
-    const READ: bool = true;
-    const WRITE: bool = false;
-    let mut f_in = open_file(victim, READ)?;
-    let mut f_out = open_file(output, WRITE)?;
+    let mut f_in = OpenOptions::new()
+        .read(true)
+        .open(victim.as_str())
+        .map_err(|err| ScalpelError::OpeningError.context(err).context(format!("Failed to open {} in R mode", victim)))?;
+
+    let mut f_out = OpenOptions::new()
+        .write(true)
+        .truncate(true)
+        .create(true)
+        .open(output.as_str())
+        .map_err(|err| ScalpelError::OpeningError.context(err).context(format!("Failed to open {} in W mode", output)))?;
 
     f_in.seek(SeekFrom::Start(start))
         .map_err(|err| ScalpelError::SeekError.context(err))?;
@@ -40,26 +47,6 @@ pub fn cut_out_bytes(
     }
 }
 
-/// File Open utility for cutting bytes
-fn open_file(file: String, rw: bool) -> Result<File> {
-    if rw {
-        let f_in = OpenOptions::new()
-            .read(true)
-            .open(file.as_str())
-            .map_err(|err| ScalpelError::OpeningError.context(err))?;
-
-        Ok(f_in)
-    } else {
-        let f_out = OpenOptions::new()
-            .write(true)
-            .truncate(true)
-            .create(true)
-            .open(file.as_str())
-            .map_err(|err| ScalpelError::OpeningError.context(err))?;
-
-        Ok(f_out)
-    }
-}
 
 #[cfg(test)]
 mod test {
@@ -67,48 +54,6 @@ mod test {
     use super::*;
     use self::rand::Rng;
     use std::iter;
-
-    #[test]
-    fn test_open_files() {
-        // generate test file with random content, read it once manually and once
-        // with the tested function, compare the content
-
-        // random content generation
-        let mut rng = rand::thread_rng();
-        let testvec: Vec<u8> = iter::repeat(1)
-            .take(1000)
-            .map(|_| rng.gen_range(1, 15))
-            .collect::<Vec<u8>>();
-        // write file with this content
-        let victim = String::from("tmp/test_bytes");
-        {
-            let mut file_tester = OpenOptions::new()
-                .write(true)
-                .truncate(true)
-                .create(true)
-                .open(victim.clone())
-                .expect("Failed to open file");
-            file_tester
-                .write_all(&testvec)
-                .expect("Failed to write to file");
-        }
-        // read the generated file
-        let mut file_tested = open_file(victim.clone(), true).expect("Failed to open tested File");
-        let mut file_tester = OpenOptions::new()
-            .read(true)
-            .open(victim)
-            .expect("Failed to open file");
-        let mut content_tested = Vec::new();
-        let mut content_tester = Vec::new();
-        file_tested
-            .read(&mut content_tested)
-            .expect("Failed to read tested File");
-        file_tester
-            .read(&mut content_tester)
-            .expect("Failed to read Tester-File");
-        // compare read content
-        assert_eq!(content_tested, content_tester);
-    }
 
     #[test]
     fn test_cut_out() {

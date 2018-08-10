@@ -1,7 +1,6 @@
 #[macro_use]
 extern crate lazy_static;
 extern crate regex;
-use regex::{Regex,Captures};
 
 #[macro_use]
 extern crate log;
@@ -35,8 +34,8 @@ const USAGE: &'static str = "
 scalpel
 
 Usage:
-  scalpel cut [--fragment=<fragment>] [--start=<start>] --end=<end> --output=<output> <victimfile>
-  scalpel cut [--fragment=<fragment>] [--start=<start>] --size=<size> --output=<output> <victimfile>
+  scalpel cut [--fragment=<fragment>] [--start=<start>] --end=<end> --output=<output> <file>
+  scalpel cut [--fragment=<fragment>] [--start=<start>] --size=<size> --output=<output> <file>
   scalpel sign <keyfile> [--output=<output>] <file>
   scalpel sign <keyfile> <files..>
   scalpel (-h | --help)
@@ -65,7 +64,6 @@ struct Args {
     flag_size: Option<ByteOffset>,
     flag_fragment: Option<usize>,
     flag_output: Option<String>,
-    arg_input: String,
     arg_keyfile: String,
     arg_file: String,
     arg_files: Vec<String>,
@@ -94,7 +92,7 @@ fn run() -> Result<()> {
     } else if args.cmd_sign {
         // command sign
 
-        let path_victim = Path::new(&args.arg_input);
+        let path_victim = Path::new(&args.arg_file);
         // get keys from the specified input file
         let key_format = args.flag_format.unwrap_or("pkcs8".to_string());
         let signer = match key_format.as_str() {
@@ -165,7 +163,7 @@ fn run() -> Result<()> {
         let fragment_size = args.flag_fragment.unwrap_or(8192) as usize; // CHUNK from cut
 
         cut::cut_out_bytes(
-            args.arg_input,
+            args.arg_file,
             args.flag_output.unwrap(),
             start,
             size,
