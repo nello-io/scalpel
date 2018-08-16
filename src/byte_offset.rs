@@ -90,16 +90,16 @@ impl<'de> de::Deserialize<'de> for ByteOffset {
                     static ref REGEX : Regex = Regex::new(r"^([0-9]+)((?:[KMGTE]i?)?)$").unwrap();
                 }
                 
-                let byte_offset = REGEX.captures(value).ok_or(Err::<Captures,ScalpelError>(ScalpelError::ParsingError{r: "".to_string()} ))
+                let byte_offset = REGEX.captures(value).ok_or(Err::<Captures,ScalpelError>(ScalpelError::ParsingError{r: "".to_string()} ) )
                 .and_then(|captures| {
                     if captures.len() == 3 {
                         let num_str = &captures[1];
                         let magnitude_str = &captures[2];
                         let num : u64 = num_str
                             .parse::<u64>()
-                            .map_err(|e| Err::<Captures,ScalpelError>(ScalpelError::ParsingError{r: format!("Failed to parse u64 {}", e)} ))?;
+                            .map_err(|e| Err::<Captures,ScalpelError>(ScalpelError::ParsingError{r: format!("Failed to parse u64 {}", e)}) )?;
                         let magnitude = Magnitude::parse(magnitude_str)
-                            .map_err(|e| Err::<Captures,ScalpelError>(ScalpelError::ParsingError{r: format!("Failed to parse magnitude {}", e)} ))?;
+                            .map_err(|e| Err::<Captures,ScalpelError>(ScalpelError::ParsingError{r: format!("Failed to parse magnitude {}", e)}) )?;
                         Ok(ByteOffset::new(num, magnitude))
                     } else {
                         Ok(Default::default())
