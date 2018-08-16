@@ -32,6 +32,7 @@ pub enum ScalpelError {
 
     #[fail(display = "Wrong usage of arguments")]
     ArgumentError,
-    #[fail(display = "Parsing Yada failed")]
-    ParsingError,
+
+    #[fail(display = "Parsing Yada failed: {}", r)]
+    ParsingError {r: String},
 }
