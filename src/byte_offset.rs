@@ -33,7 +33,7 @@ impl Magnitude {
             "Gi" => Ok(Magnitude::Gi),
             _ => {
                 debug!("No idea what to do with {} as magnitude ", mag_str);
-                Err(ScalpelError::ParsingError.into())
+                Err(ScalpelError::ParsingError{r: format!("Unknown Magnitude {}", mag_str)}.into())
             },
         }
     }
@@ -90,18 +90,21 @@ impl<'de> de::Deserialize<'de> for ByteOffset {
                     static ref REGEX : Regex = Regex::new(r"^([0-9]+)((?:[KMGTE]i?)?)$").unwrap();
                 }
                 
-                let byte_offset = REGEX.captures(value).ok_or(Err::<Captures,ScalpelError>(ScalpelError::ParsingError.into()))
+                let byte_offset = REGEX.captures(value).ok_or(Err::<Captures,ScalpelError>(ScalpelError::ParsingError{r: "".to_string()} ))
                 .and_then(|captures| {
                     if captures.len() == 3 {
                         let num_str = &captures[1];
                         let magnitude_str = &captures[2];
-                        let num : u64 = num_str.parse::<u64>().map_err(|_e| Err::<u64,ScalpelError>(ScalpelError::ParsingError) ).expect("u64 parsing exploded");
-                        let magnitude = Magnitude::parse(magnitude_str).expect("magnitude exploded");
+                        let num : u64 = num_str
+                            .parse::<u64>()
+                            .map_err(|e| Err::<Captures,ScalpelError>(ScalpelError::ParsingError{r: format!("Failed to parse u64 {}", e)} ))?;
+                        let magnitude = Magnitude::parse(magnitude_str)
+                            .map_err(|e| Err::<Captures,ScalpelError>(ScalpelError::ParsingError{r: format!("Failed to parse magnitude {}", e)} ))?;
                         Ok(ByteOffset::new(num, magnitude))
                     } else {
                         Ok(Default::default())
                     }
-                }).expect("Captures exploded");
+                }).map_err(|e| E::custom(format!("{:?}", e) ))?;
                 Ok(byte_offset)
             }
 
