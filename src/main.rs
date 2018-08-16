@@ -27,6 +27,7 @@ mod concat;
 mod cut;
 mod errors;
 mod byte_offset;
+mod stitch;
 use errors::*;
 use byte_offset::*;
 
@@ -38,35 +39,40 @@ Usage:
   scalpel cut [--fragment=<fragment>] [--start=<start>] --size=<size> --output=<output> <file>
   scalpel sign <keyfile> [--output=<output>] <file>
   scalpel sign <keyfile> <files..>
+  scalpel stitch --binary=<binary> ... --offset=<offset> ... --output=<output>
   scalpel (-h | --help)
   scalpel (-v |--version)
 
 Commands:
-  cut   extract bytes from a binary file
-  sign  sign binary with a keypair such as ED25519 or RSA
+  cut       extract bytes from a binary file
+  sign      sign binary with a keypair such as ED25519 or RSA
+  stitch    stitchs binaries together, each file starts at <offset> with random padding
 
 Options:
-  -h --help     Show this screen.
-  -v --version     Show version.
-  --start=<start>  Start byte offset of the section to cut out. If omitted, set to 0.
-  --end=<end>      The end byte offset which will not be included.
-  --size=<size>    Alternate way to sepcify the <end> combined with start.
+  -h --help              Show this screen.
+  -v --version           Show version.
+  --start=<start>        Start byte offset of the section to cut out. If omitted, set to 0.
+  --end=<end>            The end byte offset which will not be included.
+  --size=<size>          Alternate way to sepcify the <end> combined with start.
   --fragment=<fragment>  Define the size of the fragment/chunk to read/write at once. [Default: 8192]
-  --format=<format>   specify the key format, eihter pkcs8, pem, bytes or new
+  --format=<format>      specify the key format, eihter pkcs8, pem, bytes or new
 ";
 
 #[derive(Debug, Deserialize)]
 struct Args {
     cmd_cut: bool,
     cmd_sign: bool,
+    cmd_stitch: bool,
     flag_start: Option<ByteOffset>,
     flag_end: Option<ByteOffset>,
     flag_size: Option<ByteOffset>,
     flag_fragment: Option<ByteOffset>,
     flag_output: Option<String>,
+    flag_binary: Vec<String>,
     arg_keyfile: String,
     arg_file: String,
     arg_files: Vec<String>,
+    arg_offsets: Vec<u64>,
     flag_format: Option<String>,
     flag_version: bool,
     flag_help: bool,
@@ -172,6 +178,12 @@ fn run() -> Result<()> {
             info!("Cutting success");
             Ok(())
         })
+    } else if args.cmd_stitch {
+        // command stitch binaries together
+
+        stitch::stitch_files(args.flag_binary, args.arg_offsets, args.flag_output.unwrap())?;
+
+        Ok(())
     } else {
         Err(ScalpelError::ArgumentError
             .context("No idea what you were thinking..")
