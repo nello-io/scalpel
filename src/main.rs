@@ -72,7 +72,7 @@ struct Args {
     arg_keyfile: String,
     arg_file: String,
     arg_files: Vec<String>,
-    arg_offsets: Vec<u64>,
+    arg_offsets: Vec<usize>,
     flag_format: Option<String>,
     flag_version: bool,
     flag_help: bool,
