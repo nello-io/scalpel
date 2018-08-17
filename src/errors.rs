@@ -35,4 +35,7 @@ pub enum ScalpelError {
 
     #[fail(display = "Parsing Yada failed: {}", r)]
     ParsingError {r: String},
+
+    #[fail(display = "Failed to stitch due to overlapping")]
+    OverlapError,
 }

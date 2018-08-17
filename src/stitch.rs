@@ -1,16 +1,20 @@
 use std::fs::OpenOptions;
-use bytes::{BufMut, BytesMut};
+use bytes::{BytesMut};
 use std::io::{Read, Write};
 use std::path::Path;
 use errors::*;
 
-pub fn stitch_files(files: Vec<String>, offsets: Vec<u64>, output: String) -> Result<()> {
-
-    let stitched = files.iter().fold(BytesMut::new(), |stitched, elem| {//.zip(offsets.iter()).fold(BytesMut::new(), |stitched, (elem, offset)| {
-        let content = read_file(elem.to_string()).expect("Failed to read");
-        let stitched = stitch(stitched, content).expect("Failed to stitch");
+pub fn stitch_files(files: Vec<String>, offsets: Vec<usize>, output: String) -> Result<()> {
+    // sort files by offset
+    let stitched = files.iter().zip(offsets.iter()).fold(BytesMut::new(), |stitched, (elem, offset)| {
+        let content = read_file(elem.to_string())
+            .map_err(|e| {
+                return ScalpelError::OpeningError.context(e)
+            })
+            .expect("Failed to open:");
         
-        stitched
+        stitch(stitched, content, offset).expect("Failed to stitch")
+        
     });
 
 
@@ -32,15 +36,15 @@ fn read_file(name: String) -> Result<BytesMut> {
     Ok(BytesMut::from(buf))
 }
 
-fn stitch(bytes: BytesMut, new: BytesMut) -> Result<BytesMut> {
-    println!("Length: {}, {}", bytes.len(), new.len());
-    let length = bytes.len() + new.len();
-    let mut buf = BytesMut::with_capacity(length).writer();
-
-    buf.write(&new)?;
-
-    Ok(buf.into_inner())
-
+fn stitch(mut bytes: BytesMut, new: BytesMut, offset: &usize) -> Result<BytesMut> {
+    if bytes.len() < *offset {
+        return Err(ScalpelError::OverlapError.into());
+    } else {
+        bytes.resize(*offset, 0x0);
+        bytes.extend_from_slice(&new);
+        
+        Ok(bytes)
+    }
 }
 
 fn write_file(path: &Path, bytes: BytesMut) -> Result<()> {
