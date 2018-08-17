@@ -18,7 +18,7 @@ extern crate common_failures;
 extern crate failure;
 
 use docopt::Docopt;
-use std::path::Path;
+use std::path::{PathBuf, Path};
 
 mod signer;
 use signer::*;
@@ -68,7 +68,7 @@ struct Args {
     flag_size: Option<ByteOffset>,
     flag_fragment: Option<ByteOffset>,
     flag_output: Option<String>,
-    flag_binary: Vec<String>,
+    flag_binary: Vec<PathBuf>,
     arg_keyfile: String,
     arg_file: String,
     arg_files: Vec<String>,
@@ -99,12 +99,12 @@ fn run() -> Result<()> {
     } else if args.cmd_sign {
         // command sign
 
-        let path_victim = Path::new(&args.arg_file);
+        let path_victim = &args.arg_file.as_ref();
         // get keys from the specified input file
         let key_format = args.flag_format.unwrap_or("pkcs8".to_string());
         let signer = match key_format.as_str() {
             "pkcs8" => {
-                let key_path = Path::new(&args.arg_keyfile);
+                let key_path = &args.arg_keyfile.as_ref();
                 Signer::from_pkcs8_file(&key_path)?
             }
             "pem" => {
