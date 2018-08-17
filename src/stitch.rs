@@ -4,9 +4,19 @@ use std::io::{Read, Write};
 use std::path::Path;
 use errors::*;
 
-pub fn stitch_files(files: Vec<String>, offsets: Vec<usize>, output: String) -> Result<()> {
+#[derive(Deserialize, Debug)]
+pub enum FillPattern { Random, Zero, One}
+
+impl Default for FillPattern {
+    fn default() -> Self {
+        FillPattern::Zero
+    }
+}
+
+pub fn stitch_files(files: Vec<String>, offsets: Vec<usize>, output: String, fill_pattern: FillPattern) -> Result<()> {
     
-    // sort files by offset
+    // TODO: sort files by offset
+
     let stitched = files.iter().zip(offsets.iter()).fold(BytesMut::new(), |stitched, (elem, offset)| {
         let content = read_file(elem.to_string())
             .map_err(|e| {
@@ -14,7 +24,7 @@ pub fn stitch_files(files: Vec<String>, offsets: Vec<usize>, output: String) -> 
             })
             .expect("Failed to open:");
         
-        stitch(stitched, content, offset).expect("Failed to stitch")
+        stitch(stitched, content, offset, &fill_pattern).expect("Failed to stitch")
         
     });
 
@@ -36,11 +46,15 @@ fn read_file(name: String) -> Result<BytesMut> {
     Ok(BytesMut::from(buf))
 }
 
-fn stitch(mut bytes: BytesMut, new: BytesMut, offset: &usize) -> Result<BytesMut> {
+fn stitch(mut bytes: BytesMut, new: BytesMut, offset: &usize, fill_pattern: &FillPattern) -> Result<BytesMut> {
     if bytes.len() > *offset {
         return Err(ScalpelError::OverlapError.into());
     } else {
-        bytes.resize(*offset, 0x0);
+        match fill_pattern {
+            FillPattern::Zero => bytes.resize(*offset, 0x0),
+            FillPattern::One => bytes.resize(*offset, 0x1),
+            FillPattern::Random => unimplemented!(),
+        }
         bytes.extend_from_slice(&new);
         debug!("Length: {}", &bytes.len());
         Ok(bytes)
