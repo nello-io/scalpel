@@ -18,18 +18,18 @@ pub fn stitch_files(files: Vec<String>, offsets: Vec<usize>, output: String, fil
     // TODO: sort files by offset
     let (files, offsets) = sort_vec_by_offset(files, offsets)?;
 
-    let stitched = files.iter().zip(offsets.iter()).fold(BytesMut::new(), |stitched, (elem, offset)| {
+    let stitched: Result<BytesMut>
+     = files.iter().zip(offsets.iter()).try_fold(BytesMut::new(), |stitched, (elem, offset)| {
         let content = read_file(elem.to_string())
             .map_err(|e| {
                 return ScalpelError::OpeningError.context(e)
-            })
-            .expect("Failed to open:");
+            })?;
         
-        stitch(stitched, content, offset, &fill_pattern).expect("Failed to stitch")
+        Ok(stitch(stitched, content, offset, &fill_pattern)?)
         
     });
 
-    write_file(Path::new(&output), stitched)?;
+    write_file(Path::new(&output), stitched?)?;
 
     Ok(())
 }
@@ -63,8 +63,7 @@ fn stitch(mut bytes: BytesMut, new: BytesMut, offset: &usize, fill_pattern: &Fil
 }
 
 fn write_file(path: &Path, bytes: BytesMut) -> Result<()> {
-    let path: &Path = path.as_ref();
-
+    
     let mut file = OpenOptions::new()
         .write(true)
         .create(true)
@@ -88,9 +87,6 @@ where T: Clone,
         let ind_o: usize = offset.iter().position(|&s| &s == elem).expect("Failed to sort");
         vec[ind_o].clone()
     }).collect();
-
-    println!("orig: {:?}", offset);
-    println!("sorted: {:?}", offset_sorted);
 
     Ok((sorted_vec, offset_sorted))
 }
