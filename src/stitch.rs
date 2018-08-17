@@ -89,3 +89,30 @@ where T: Clone,
 
     Ok((sorted_vec, offset_sorted))
 }
+
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn stitch_it() {
+        let files = vec![ PathBuf::from("tmp/test_bytes"), PathBuf::from("tmp/test_bytes")];
+
+        let offsets = vec![0, 25600];
+        super::stitch_files(files, offsets, "stitched_test".to_string(), FillPattern::Zero).expect("Failed to stitch two files");
+        let buf = {
+            let mut file = OpenOptions::new()
+                .read(true)
+                .open("stitched_test")
+                .map_err(|err| ScalpelError::OpeningError.context(err)).expect("Failed to open stitched file");
+
+            let mut buf = Vec::new();
+            file.read_to_end(&mut buf).expect("Failed to read stitched file");
+            buf
+        };
+        assert_eq!(buf.len(), 51200);
+    }
+
+
+}
