@@ -1,7 +1,7 @@
 use std::fs::OpenOptions;
 use bytes::{BytesMut};
 use std::io::{Read, Write};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use errors::*;
 
 #[derive(Deserialize, Debug)]
@@ -13,14 +13,14 @@ impl Default for FillPattern {
     }
 }
 
-pub fn stitch_files(files: Vec<String>, offsets: Vec<usize>, output: String, fill_pattern: FillPattern) -> Result<()> {
+pub fn stitch_files(files: Vec<PathBuf>, offsets: Vec<usize>, output: String, fill_pattern: FillPattern) -> Result<()> {
     
     // TODO: sort files by offset
     let (files, offsets) = sort_vec_by_offset(files, offsets)?;
 
     let stitched: Result<BytesMut>
      = files.iter().zip(offsets.iter()).try_fold(BytesMut::new(), |stitched, (elem, offset)| {
-        let content = read_file(elem.to_string())
+        let content = read_file(elem.as_ref())
             .map_err(|e| {
                 return ScalpelError::OpeningError.context(e)
             })?;
@@ -34,7 +34,7 @@ pub fn stitch_files(files: Vec<String>, offsets: Vec<usize>, output: String, fil
     Ok(())
 }
 
-fn read_file(name: String) -> Result<BytesMut> {
+fn read_file(name: &Path) -> Result<BytesMut> {
 
     let mut file = OpenOptions::new()
         .read(true)
@@ -83,7 +83,6 @@ where T: Clone,
     offset_sorted.sort_unstable();
 
     let sorted_vec =  offset_sorted.iter().map(|elem|  {
-        println!("looking for {} in {:?}",&elem, &offset );
         let ind_o: usize = offset.iter().position(|&s| &s == elem).expect("Failed to sort");
         vec[ind_o].clone()
     }).collect();
