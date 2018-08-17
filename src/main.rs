@@ -39,7 +39,7 @@ Usage:
   scalpel cut [--fragment=<fragment>] [--start=<start>] --size=<size> --output=<output> <file>
   scalpel sign <keyfile> [--output=<output>] <file>
   scalpel sign <keyfile> <files..>
-  scalpel stitch --binary=<binary> ... --offset=<offset> ... --output=<output>
+  scalpel stitch (--binary=<binary> --offset=<offset>)... --output=<output>
   scalpel (-h | --help)
   scalpel (-v |--version)
 
@@ -72,7 +72,7 @@ struct Args {
     arg_keyfile: String,
     arg_file: String,
     arg_files: Vec<String>,
-    arg_offsets: Vec<usize>,
+    flag_offset: Vec<usize>,
     flag_format: Option<String>,
     flag_version: bool,
     flag_help: bool,
@@ -180,8 +180,8 @@ fn run() -> Result<()> {
         })
     } else if args.cmd_stitch {
         // command stitch binaries together
-
-        stitch::stitch_files(args.flag_binary, args.arg_offsets, args.flag_output.unwrap())?;
+        
+        stitch::stitch_files(args.flag_binary, args.flag_offset, args.flag_output.unwrap())?;
 
         Ok(())
     } else {
