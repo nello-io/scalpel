@@ -16,6 +16,7 @@ impl Default for FillPattern {
 pub fn stitch_files(files: Vec<String>, offsets: Vec<usize>, output: String, fill_pattern: FillPattern) -> Result<()> {
     
     // TODO: sort files by offset
+    let (files, offsets) = sort_vec_by_offset(files, offsets)?;
 
     let stitched = files.iter().zip(offsets.iter()).fold(BytesMut::new(), |stitched, (elem, offset)| {
         let content = read_file(elem.to_string())
@@ -73,4 +74,23 @@ fn write_file(path: &Path, bytes: BytesMut) -> Result<()> {
     file.write(&bytes)?;
 
     Ok(())
+}
+
+pub fn sort_vec_by_offset<T>(vec: Vec<T>, offset: Vec<usize>) -> Result<(Vec<T>, Vec<usize>)>
+where T: Clone,
+{
+
+    let mut offset_sorted = offset.clone();
+    offset_sorted.sort_unstable();
+
+    let sorted_vec =  offset_sorted.iter().map(|elem|  {
+        println!("looking for {} in {:?}",&elem, &offset );
+        let ind_o: usize = offset.iter().position(|&s| &s == elem).expect("Failed to sort");
+        vec[ind_o].clone()
+    }).collect();
+
+    println!("orig: {:?}", offset);
+    println!("sorted: {:?}", offset_sorted);
+
+    Ok((sorted_vec, offset_sorted))
 }
