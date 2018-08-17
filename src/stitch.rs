@@ -5,6 +5,7 @@ use std::path::Path;
 use errors::*;
 
 pub fn stitch_files(files: Vec<String>, offsets: Vec<usize>, output: String) -> Result<()> {
+    
     // sort files by offset
     let stitched = files.iter().zip(offsets.iter()).fold(BytesMut::new(), |stitched, (elem, offset)| {
         let content = read_file(elem.to_string())
@@ -16,7 +17,6 @@ pub fn stitch_files(files: Vec<String>, offsets: Vec<usize>, output: String) -> 
         stitch(stitched, content, offset).expect("Failed to stitch")
         
     });
-
 
     write_file(Path::new(&output), stitched)?;
 
@@ -37,12 +37,12 @@ fn read_file(name: String) -> Result<BytesMut> {
 }
 
 fn stitch(mut bytes: BytesMut, new: BytesMut, offset: &usize) -> Result<BytesMut> {
-    if bytes.len() < *offset {
+    if bytes.len() > *offset {
         return Err(ScalpelError::OverlapError.into());
     } else {
         bytes.resize(*offset, 0x0);
         bytes.extend_from_slice(&new);
-        
+        debug!("Length: {}", &bytes.len());
         Ok(bytes)
     }
 }
