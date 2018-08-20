@@ -104,7 +104,7 @@ mod test {
     fn stitch_it() {
         let files = vec![ PathBuf::from("tmp/test_bytes"), PathBuf::from("tmp/test_bytes")];
 
-        let offsets = vec![0, 25601];
+        let offsets = vec![0, 51200];
         super::stitch_files(files, offsets, "stitched_test".to_string(), FillPattern::Zero).expect("Failed to stitch two files");
         let buf = {
             let mut file = OpenOptions::new()
@@ -116,7 +116,7 @@ mod test {
             file.read_to_end(&mut buf).expect("Failed to read stitched file");
             buf
         };
-        assert_eq!(buf.len(), 51201);
+        assert_eq!(buf.len(), 102400);
     }
 
 
