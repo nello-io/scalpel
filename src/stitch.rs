@@ -3,7 +3,7 @@ use bytes::{BytesMut};
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 use errors::*;
-use rand::Rng;
+use rand::{Rng};
 
 #[derive(Deserialize, Debug)]
 pub enum FillPattern { Random, Zero, One}
@@ -57,7 +57,7 @@ fn stitch(mut bytes: BytesMut, new: BytesMut, offset: &usize, fill_pattern: &Fil
             FillPattern::One => bytes.resize(*offset, 0x1),
             FillPattern::Random => {
                 let mut padding = vec![0; *offset-bytes.len()];
-                super::rand::thread_rng().try_fill(&mut padding[..])?;
+                ::rand::thread_rng().try_fill(&mut padding[..])?;
                 bytes.extend_from_slice(&padding);
             },
         }
