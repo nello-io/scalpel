@@ -3,6 +3,7 @@ use bytes::{BytesMut};
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 use errors::*;
+use rand::Rng;
 
 #[derive(Deserialize, Debug)]
 pub enum FillPattern { Random, Zero, One}
@@ -54,7 +55,11 @@ fn stitch(mut bytes: BytesMut, new: BytesMut, offset: &usize, fill_pattern: &Fil
         match fill_pattern {
             FillPattern::Zero => bytes.resize(*offset, 0x0),
             FillPattern::One => bytes.resize(*offset, 0x1),
-            FillPattern::Random => unimplemented!(),
+            FillPattern::Random => {
+                let mut padding = vec![0; *offset-bytes.len()];
+                super::rand::thread_rng().try_fill(&mut padding[..])?;
+                bytes.extend_from_slice(&padding);
+            },
         }
         bytes.extend_from_slice(&new);
         debug!("Length: {}", &bytes.len());
@@ -99,7 +104,7 @@ mod test {
     fn stitch_it() {
         let files = vec![ PathBuf::from("tmp/test_bytes"), PathBuf::from("tmp/test_bytes")];
 
-        let offsets = vec![0, 25600];
+        let offsets = vec![0, 25601];
         super::stitch_files(files, offsets, "stitched_test".to_string(), FillPattern::Zero).expect("Failed to stitch two files");
         let buf = {
             let mut file = OpenOptions::new()
@@ -111,7 +116,7 @@ mod test {
             file.read_to_end(&mut buf).expect("Failed to read stitched file");
             buf
         };
-        assert_eq!(buf.len(), 51200);
+        assert_eq!(buf.len(), 51201);
     }
 
 

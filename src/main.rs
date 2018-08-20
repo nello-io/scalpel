@@ -16,9 +16,11 @@ extern crate serde;
 extern crate common_failures;
 #[macro_use]
 extern crate failure;
+extern crate rand;
 
 use docopt::Docopt;
 use std::path::{PathBuf, Path};
+use rand::{ThreadRng, Rng};
 
 mod signer;
 use signer::*;

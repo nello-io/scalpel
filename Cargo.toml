@@ -17,6 +17,7 @@ regex = "*"
 failure = "*"
 failure_derive = "*"
 common_failures = "0.1.0"
+rand = "0.5.5"
 
 [dev-dependencies]
 rand = "*"
