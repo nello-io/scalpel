@@ -16,6 +16,7 @@ extern crate serde;
 extern crate common_failures;
 #[macro_use]
 extern crate failure;
+extern crate rand;
 
 use docopt::Docopt;
 use std::path::{PathBuf, Path};
@@ -39,7 +40,7 @@ Usage:
   scalpel cut [--fragment=<fragment>] [--start=<start>] --size=<size> --output=<output> <file>
   scalpel sign <keyfile> [--output=<output>] <file>
   scalpel sign <keyfile> <files..>
-  scalpel stitch (--binary=<binary> --offset=<offset>)... [--fill-pattern=(random|zero|one)] --output=<output>
+  scalpel stitch (--binary=<binary> --offset=<offset>)... --output=<output> [--fill-pattern=<fill_pattern>]
   scalpel (-h | --help)
   scalpel (-v |--version)
 
@@ -49,13 +50,14 @@ Commands:
   stitch    stitchs binaries together, each file starts at <offset> with random padding
 
 Options:
-  -h --help              Show this screen.
-  -v --version           Show version.
-  --start=<start>        Start byte offset of the section to cut out. If omitted, set to 0.
-  --end=<end>            The end byte offset which will not be included.
-  --size=<size>          Alternate way to sepcify the <end> combined with start.
-  --fragment=<fragment>  Define the size of the fragment/chunk to read/write at once. [Default: 8192]
-  --format=<format>      specify the key format, eihter pkcs8, pem, bytes or new
+  -h --help                     Show this screen.
+  -v --version                  Show version.
+  --start=<start>               Start byte offset of the section to cut out. If omitted, set to 0.
+  --end=<end>                   The end byte offset which will not be included.
+  --size=<size>                 Alternate way to sepcify the <end> combined with start.
+  --fragment=<fragment>         Define the size of the fragment/chunk to read/write at once. [Default: 8192]
+  --format=<format>             Specify the key format, eihter pkcs8, pem, bytes or new
+  --fill-pattern=<fill_patern>  Specify padding style for stitching (random|one|zero)
 ";
 
 #[derive(Debug, Deserialize)]
@@ -73,7 +75,7 @@ struct Args {
     arg_file: String,
     arg_files: Vec<String>,
     flag_offset: Vec<usize>,
-    flag_fillpattern: Option<stitch::FillPattern>,
+    flag_fill_pattern: Option<stitch::FillPattern>,
     flag_format: Option<String>,
     flag_version: bool,
     flag_help: bool,
@@ -182,7 +184,7 @@ fn run() -> Result<()> {
     } else if args.cmd_stitch {
         // command stitch binaries together
         
-        stitch::stitch_files(args.flag_binary, args.flag_offset, args.flag_output.unwrap(), args.flag_fillpattern.unwrap_or(Default::default()) )?;
+        stitch::stitch_files(args.flag_binary, args.flag_offset, args.flag_output.unwrap(), args.flag_fill_pattern.unwrap_or_default() )?;
 
         Ok(())
     } else {
