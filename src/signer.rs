@@ -146,7 +146,8 @@ impl Signer {
 
         if content.len() > 64 {
             let (data, signature) = content.split_at(content.len() - 64);
-            self.verify(data, signature)?;
+            self.verify(data, signature)
+                .map_err(|e| ScalpelError::ContentError.context(e))?;
             Ok(())
         } else {
             Err(ScalpelError::ContentError
