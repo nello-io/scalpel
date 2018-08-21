@@ -38,8 +38,8 @@ scalpel
 Usage:
   scalpel cut [--fragment=<fragment>] [--start=<start>] --end=<end> --output=<output> <file>
   scalpel cut [--fragment=<fragment>] [--start=<start>] --size=<size> --output=<output> <file>
-  scalpel sign <keyfile> [--output=<output>] <file>
-  scalpel sign <keyfile> <files..>
+  scalpel sign <keyfile> [--output=<output>] [--format=<format>] <file>
+  scalpel sign <keyfile> <files>...
   scalpel stitch (--binary=<binary> --offset=<offset>)... --output=<output> [--fill-pattern=<fill_pattern>]
   scalpel (-h | --help)
   scalpel (-v |--version)
@@ -101,7 +101,6 @@ fn run() -> Result<()> {
     } else if args.cmd_sign {
         // command sign
 
-        let path_victim = &args.arg_file.as_ref();
         // get keys from the specified input file
         let key_format = args.flag_format.unwrap_or("pkcs8".to_string());
         let signer = match key_format.as_str() {
@@ -119,23 +118,33 @@ fn run() -> Result<()> {
                     .into())
             }
         };
-        // get signature
-        let signature = signer.calculate_signature_of_file(path_victim)?;
-
-        // create signed file
-        concat::append_signature(&path_victim, &signature)?;
-
+        
         if args.arg_files.len() > 0 {
             for item in args.arg_files.iter() {
-                signer.verify_file(Path::new(item))?;
+                // get signature
+                let signature = signer.calculate_signature_of_file(item)?;
+                // create signed file
+                concat::append_signature(item.as_ref(), &signature)?;
+
+                // verify
+                let signed_filename = concat::derive_output_filename(Path::new(item))?;
+                signer.verify_file(&signed_filename)?;
+                info!("signing success: \"{}\"", &signed_filename.as_str());
             }
         } else {
+            let path_victim = &args.arg_file.as_ref();
+            // get signature
+            let signature = signer.calculate_signature_of_file(path_victim)?;
+
+            // create signed file
+            concat::append_signature(path_victim, &signature)?;
+
             // test the verification
             let signed_filename = args
                 .flag_output
                 .unwrap_or(concat::derive_output_filename(path_victim)?);
 
-            signer.verify_file(Path::new(&signed_filename))?;
+            signer.verify_file(&signed_filename)?;
 
             info!("signing success: \"{}\"", signed_filename.as_str());
         }
